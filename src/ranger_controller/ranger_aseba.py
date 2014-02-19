@@ -65,69 +65,54 @@ class _RangerLowLevel(Thread):
         "eye_left_x":           True,   # x coord of left pupil, [-100,100]
         "eye_left_y":           True,   # y coord of left pupil, [-100,100]
         "eye_right_x":          True,   # x coord of right pupil, [-100,100]
-        "eye_right_y":          True    # y coord of right pupil, [-100,100]
+        "eye_right_y":          True,   # y coord of right pupil, [-100,100]
+        "freq_main":            False,  # update frequency of the main robot node
+        "freq_neuil":           False,  # update frequency of the 'neuil' robot node
+        "freq_rab":             False   # update frequency of the 'Range and Bearing' robot node
         }
 
     def __init__(self):
         Thread.__init__(self)
 
-        dummy = True
+        self._init_accessors()
+
+        self._update_rate = {"main": time.time(), 
+                             "neuil": time.time(), 
+                             "rab": time.time()}
+
+
+        dummy = False
         # init medulla
         self.med = Medulla(dummy = dummy)
         #self.med = Medulla()
-        nodes = self.med.GetNodesList()
+        nodes = self.med.get_nodes_list()
         if not dummy and len(nodes) != 3:
             logger.error("One of the Ranger Aseba node is not up!!")
             logger.debug("List of active nodes: {0}".format(nodes))
             raise Exception("Missing Aseba node")
 
+        # (Re-)load the aesl scripts, mandatory for medulla to know about
+        # the list of available events
+        self.med.load_scripts("/home/lemaigna/src/ranger2/aseba/RangerMain.aesl")
         self._send_evt("enableFeedback", enable = 1)
+
+        self.med.on_event("mainFeedback", self._process_main_feedback)
+        self.med.on_event("neuilFeedback", self._process_neuil_feedback)
+        #self.med.on_event("receiverFeedback", self._process_rab_feedback)
 
         self.state = {}
         self.beacons = {}
 
-        self.running = True
         self.start()
 
         self.get_full_state()
-        self._init_accessors()
 
     def close(self):
-        self.running = False
+        self.med.close()
         self.join()
 
     def run(self):
-
-        self.main_msg = [ 1.2, 0.4, 1.5,
-                    0.43, 0.54,
-                    3452,
-                    1,
-                    1.2, 2.5,
-                    0b100110100, 0b000100110, 0b001000111,
-                    1234,34324,5432,34554,
-                    0,
-                    1.6,2.3]
-        self.neuil_msg = [0.12, 1.03, 0.03,
-                          0,
-                          0.023]
-
- 
-        while self.running:
-            time.sleep(0.02)
-            if hasattr(self, 'main_msg') and self.main_msg:
-                self._process_main_feedback(self.main_msg, with_encoders = True)
-                self.main_msg = None
-
-            if hasattr(self, 'neuil_msg') and self.neuil_msg:
-                self._process_neuil_feedback(self.neuil_msg)
-                self.neuil_msg = None
-
-            if hasattr(self, 'rab_msg') and self.rab_msg:
-                self._process_rab_feedback(self.rab_msg)
-                self.rab_msg = None
-
-
-
+        self.med.run()
 
     def lefteye(self, x, y):
         self._send_evt("EYE", leyex = x, leyey = y, reyex = 0, reyey = 0)
@@ -148,11 +133,11 @@ class _RangerLowLevel(Thread):
 
         while "accelerometer" not in self.state and \
               "lolette" not in self.state:
-                  time.sleep(0.1)
-                  wait_duration += 0.1
+            time.sleep(0.1)
+            wait_duration += 0.1
 
-                  if wait_duration > MAX_WAIT:
-                      raise Exception("The robot does not transmit its state!!")
+            if wait_duration > MAX_WAIT:
+                raise Exception("The robot does not transmit its state!!")
 
     def _process_main_feedback(self, msg, with_encoders = False):
         self.state["accelerometer"] = [msg[0], msg[1], msg[2]]
@@ -165,11 +150,11 @@ class _RangerLowLevel(Thread):
 
         def decompress_touch(state):
             raw = [bool(state & 1 << i) for i in range(9)]
-            return [raw[0:3], raw[3:6], raw[6:9]]
+            return [raw[0:9:3], raw[1:9:3], raw[2:9:3]]
 
-        self.state["touch_left"] = decompress_touch(msg[9])
-        self.state["touch_rear"] = decompress_touch(msg[10])
-        self.state["touch_right"] = decompress_touch(msg[11])
+        self.state["touch_left"] = decompress_touch(msg[10])
+        self.state["touch_rear"] = decompress_touch(msg[11])
+        self.state["touch_right"] = decompress_touch(msg[9])
 
         if with_encoders:
             self.state["encoders"] = [msg[12], msg[13], msg[14], msg[15]]
@@ -178,6 +163,13 @@ class _RangerLowLevel(Thread):
         self.state["motor_current_left"] = msg[13 if not with_encoders else 17]
         self.state["motor_current_right"] = msg[14 if not with_encoders else 18]
 
+        now = time.time()
+        self.state["freq_main"] = 1./(now - self._update_rate["main"])
+        #if self.state["freq_main"] > 100:
+        #    import pdb;pdb.set_trace()
+        #print(self.state["freq_main"])
+        #print(now - self._update_rate["main"])
+        self._update_rate["main"] = now
 
     def _process_neuil_feedback(self, msg):
         self.state["ir_left"] = msg[0]
@@ -185,6 +177,11 @@ class _RangerLowLevel(Thread):
         self.state["ir_right"] = msg[2]
         self.state["lolette"] = msg[3]
         self.state["scale"] = msg[4]
+
+        now = time.time()
+        self.state["freq_neuil"] = 1./(now - self._update_rate["neuil"])
+        self._update_rate["neuil"] = now
+
 
     def _process_rab_feedback(self, msg):
         id = msg[0]
@@ -196,11 +193,13 @@ class _RangerLowLevel(Thread):
 
         self.beacons[id] = beacon
  
-
+        now = time.time()
+        self.state["freq_rab"] = 1./(now - self._update_rate["rab"])
+        self._update_rate["rab"] = now
 
     def _send_evt(self, id, **kwarg):
         logger.debug("Event %s(%s) sent." % (id, str(kwarg)))
-        self.med.SendEventName(id, kwarg.values())
+        self.med.send_event(id, kwarg.values())
 
     def _add_property(self, name, writable):
 

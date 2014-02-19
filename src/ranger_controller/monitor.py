@@ -27,19 +27,26 @@ neuil_msg = [0.12, 1.03, 0.03,
 
 class Monitor:
 
-    def __init__(self):
+    def __init__(self, silent = False):
         self.robot = get_robot()
 
-        self.out = ConsoleTK(height = 10)
+        # used for debugging purposes (-> if set to true, no ANSI sequence -> no mess with debug msgs)
+        self.silent = silent
+
+        if not silent:
+            self.out = ConsoleTK(height = 12)
 
     def __enter__(self):
-        self.out.__enter__()
+
+        if not self.silent:
+            self.out.__enter__()
         self.running = True
         return self
 
     def __exit__(self, type, value, traceback):
         self.running = False
-        self.out.__exit__(type, value, traceback)
+        if not self.silent:
+            self.out.__exit__(type, value, traceback)
         self.robot.close()
 
     def showstatus(self):
@@ -110,6 +117,13 @@ class Monitor:
         self.out.relmoveto(0,1)
         self.out.absolutebar(robot.ir_right, 0.3, "m", label = " IR right", autocolor = True)
 
+        ###################################################
+        ### Update frequencies
+        ###################################################
+
+        self.out.moveto(0,11)
+        self.out.label("Freq. main: %10.1fHz -- Freq. neuil: %10.1fHz" % (robot.freq_main, robot.freq_neuil))
+
 
     def lowlevel_emulator(self, key):
         global main_msg, neuil_msg
@@ -178,17 +192,18 @@ class Monitor:
 
         while self.running and key != "q":
 
-            key = self.out.get_keypress()
-            self.lowlevel_emulator(key)
+            if not self.silent:
+                key = self.out.get_keypress()
+                #self.lowlevel_emulator(key)
 
-            self.out.moveto(0,0)
-            self.showstatus()
+                self.out.moveto(0,0)
+                self.showstatus()
             time.sleep(0.02)
 
 
 if __name__ == '__main__':
 
-    with Monitor() as monitor:
+    with Monitor(silent = False) as monitor:
 
         try:
             monitor.run()
