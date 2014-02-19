@@ -6,7 +6,7 @@ import copy
 from medulla import Medulla
 from helpers import singleton
 
-from threading import Thread
+import threading
 
 ID = dict(BEACON = 0,
           ROBOT1 = 1,
@@ -39,7 +39,7 @@ def _element_clip(list_i, min_val, max_val):
     return [min(max(i, min_val), max_val) for i in list_i]
 
 
-class _RangerLowLevel(Thread):
+class _RangerLowLevel():
 
     STATE = {
         # name of the field,    writable?
@@ -72,7 +72,9 @@ class _RangerLowLevel(Thread):
         }
 
     def __init__(self):
-        Thread.__init__(self)
+
+        self.state = {}
+        self.beacons = {}
 
         self._init_accessors()
 
@@ -98,21 +100,19 @@ class _RangerLowLevel(Thread):
 
         self.med.on_event("mainFeedback", self._process_main_feedback)
         self.med.on_event("neuilFeedback", self._process_neuil_feedback)
-        #self.med.on_event("receiverFeedback", self._process_rab_feedback)
+        self.med.on_event("receiverFeedback", self._process_rab_feedback)
+        self.state["freq_main"] = 0.0
+        self.state["freq_neuil"] = 0.0
+        self.state["freq_rab"] = 0.0
 
-        self.state = {}
-        self.beacons = {}
-
-        self.start()
+        self.med_thread = threading.Thread(target=self.med.run)
+        self.med_thread.start()
 
         self.get_full_state()
 
     def close(self):
         self.med.close()
-        self.join()
-
-    def run(self):
-        self.med.run()
+        self.med_thread.join()
 
     def lefteye(self, x, y):
         self._send_evt("EYE", leyex = x, leyey = y, reyex = 0, reyey = 0)

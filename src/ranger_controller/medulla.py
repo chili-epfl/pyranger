@@ -5,6 +5,7 @@ import dbus
 
 from dbus.mainloop.glib import DBusGMainLoop
 import gobject
+gobject.threads_init()
 
 from optparse import OptionParser
 
