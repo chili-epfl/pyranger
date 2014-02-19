@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import dbus
+import time
 
 from dbus.mainloop.glib import DBusGMainLoop
 import gobject
@@ -10,10 +11,16 @@ gobject.threads_init()
 from optparse import OptionParser
 
 class Medulla:
+
+    NB_EVTS_SMOOTHING = 10 # nb of events to be received before computing frequency
+
     def __init__(self, system_bus = False, dummy = False):
         self.dummy = dummy
 
         self.callbacks = {}
+        self._events_last_evt = {}
+        self._events_periods = {}
+        self.events_freq = {}
 
         if not dummy:
             DBusGMainLoop(set_as_default=True)
@@ -121,10 +128,25 @@ class Medulla:
         if name in self.callbacks:
             self.callbacks[name](vals)
 
+            # update frequency for this event
+            now = time.time()
+            self._events_periods[name].append(now - self._events_last_evt[name])
+            self._events_last_evt[name] = now
+            if len(self._events_periods[name]) == Medulla.NB_EVTS_SMOOTHING:
+                self.events_freq[name] = 1. / (sum(self._events_periods[name]) / float(Medulla.NB_EVTS_SMOOTHING))
+                self._events_periods[name] = []
+
     def on_event(self, event_id, cb):
         if self.dummy: return
 
+        if not isinstance(event_id, basestring):
+            # supporting events by ID would be easy to add. Actually, it only requires more code in _dispatch_events
+            raise Exception("Only setting event by name is currently supported")
+
         self.callbacks[event_id] = cb
+        self._events_last_evt[event_id] = time.time()
+        self._events_periods[event_id] = []
+        self.events_freq[event_id] = 0.
 
         if isinstance(event_id, basestring):
             self.events.ListenEventName(event_id)

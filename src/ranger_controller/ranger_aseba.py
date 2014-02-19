@@ -131,7 +131,7 @@ class _RangerLowLevel():
 
         wait_duration = 0.
 
-        while "accelerometer" not in self.state and \
+        while "accelerometer" not in self.state or \
               "lolette" not in self.state:
             time.sleep(0.1)
             wait_duration += 0.1
@@ -163,13 +163,7 @@ class _RangerLowLevel():
         self.state["motor_current_left"] = msg[13 if not with_encoders else 17]
         self.state["motor_current_right"] = msg[14 if not with_encoders else 18]
 
-        now = time.time()
-        self.state["freq_main"] = 1./(now - self._update_rate["main"])
-        #if self.state["freq_main"] > 100:
-        #    import pdb;pdb.set_trace()
-        #print(self.state["freq_main"])
-        #print(now - self._update_rate["main"])
-        self._update_rate["main"] = now
+        self.state["freq_main"] = self.med.events_freq["mainFeedback"]
 
     def _process_neuil_feedback(self, msg):
         self.state["ir_left"] = msg[0]
@@ -178,10 +172,7 @@ class _RangerLowLevel():
         self.state["lolette"] = msg[3]
         self.state["scale"] = msg[4]
 
-        now = time.time()
-        self.state["freq_neuil"] = 1./(now - self._update_rate["neuil"])
-        self._update_rate["neuil"] = now
-
+        self.state["freq_neuil"] = self.med.events_freq["neuilFeedback"]
 
     def _process_rab_feedback(self, msg):
         id = msg[0]
@@ -192,10 +183,8 @@ class _RangerLowLevel():
                 data = [msg[3+i] for i in range(7)])
 
         self.beacons[id] = beacon
- 
-        now = time.time()
-        self.state["freq_rab"] = 1./(now - self._update_rate["rab"])
-        self._update_rate["rab"] = now
+
+        self.state["freq_rab"] = self.med.events_freq["receiverFeedback"]
 
     def _send_evt(self, id, **kwarg):
         logger.debug("Event %s(%s) sent." % (id, str(kwarg)))

@@ -122,7 +122,7 @@ class Monitor:
         ###################################################
 
         self.out.moveto(0,11)
-        self.out.label("Freq. main: %10.1fHz -- Freq. neuil: %10.1fHz" % (robot.freq_main, robot.freq_neuil))
+        self.out.label("Freq. main: %4.1fHz | Freq. neuil: %4.1fHz | Freq. R&B: %4.1fHz" % (robot.freq_main, robot.freq_neuil, robot.freq_rab))
 
 
     def lowlevel_emulator(self, key):
