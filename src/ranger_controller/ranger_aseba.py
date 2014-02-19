@@ -5,6 +5,7 @@ import copy
 
 from medulla import Medulla
 from helpers import singleton
+from data_conversion import *
 
 import threading
 
@@ -166,9 +167,9 @@ class _RangerLowLevel():
         self.state["freq_main"] = self.med.events_freq["mainFeedback"]
 
     def _process_neuil_feedback(self, msg):
-        self.state["ir_left"] = msg[0]
-        self.state["ir_center"] = msg[1]
-        self.state["ir_right"] = msg[2]
+        self.state["ir_left"] = linear_interpolation(msg[0], GP2Y0A41SK0F)
+        self.state["ir_center"] = linear_interpolation(msg[1], GP2Y0A02YK)
+        self.state["ir_right"] = linear_interpolation(msg[2], GP2Y0A41SK0F)
         self.state["lolette"] = msg[3]
         self.state["scale"] = msg[4]
 

@@ -111,11 +111,11 @@ class Monitor:
         ###################################################
 
         self.out.moveto(30,7)
-        self.out.absolutebar(robot.ir_left, 0.3, "m", label = "  IR left", autocolor = True)
+        self.out.absolutebar(robot.ir_left, 0.5, "m", label = "  IR left", autocolor = True)
         self.out.relmoveto(0,1)
-        self.out.absolutebar(robot.ir_center, 1.3, "m", label = "IR center", autocolor = True)
+        self.out.absolutebar(robot.ir_center, 2.1, "m", label = "IR center", autocolor = True)
         self.out.relmoveto(0,1)
-        self.out.absolutebar(robot.ir_right, 0.3, "m", label = " IR right", autocolor = True)
+        self.out.absolutebar(robot.ir_right, 0.5, "m", label = " IR right", autocolor = True)
 
         ###################################################
         ### Update frequencies
