@@ -49,8 +49,8 @@ class _RangerLowLevel():
         "sharp2":               False,  # IR sensor, bottom right, in m
         "battery":              False,  # battery level, in mV
         "bumper":               False,  # is front bumper active? (bool)
-        "velocity_left":        True,   # left motor velocity, in rad.s^-1
-        "velocity_right":       True,   # right motor velocity, in rad.s^-1
+        "velocity_left":        False,   # left motor velocity, in rad.s^-1
+        "velocity_right":       False,   # right motor velocity, in rad.s^-1
         "touch_left":           False,  # 3x3 bool matrix, touch sensors left
         "touch_rear":           False,  # 3x3 bool matrix, touch sensors rear
         "touch_right":          False,  # 3x3 bool matrix, touchsensors right
@@ -63,10 +63,6 @@ class _RangerLowLevel():
         "ir_right":             False,  # IR sensor, front-right, in m
         "lolette":              False,  # is the lolette present? (bool)
         "scale":                False,  # measured weight, in kg
-        "eye_left_x":           True,   # x coord of left pupil, [-100,100]
-        "eye_left_y":           True,   # y coord of left pupil, [-100,100]
-        "eye_right_x":          True,   # x coord of right pupil, [-100,100]
-        "eye_right_y":          True,   # y coord of right pupil, [-100,100]
         "freq_main":            False,  # update frequency of the main robot node
         "freq_neuil":           False,  # update frequency of the 'neuil' robot node
         "freq_rab":             False   # update frequency of the 'Range and Bearing' robot node
@@ -174,8 +170,8 @@ class _RangerLowLevel():
 
         self.state["battery"] = self.filtered("battery", msg[5])
         self.state["bumper"] = msg[6]
-        self.state["velocity_left"] = msg[7]
-        self.state["velocity_right"] = msg[8]
+        self.state["velocity_left"] = self.filtered("lspeed", msg[7])
+        self.state["velocity_right"] = self.filtered("rspeed", -msg[8])
 
         def decompress_touch(state):
             raw = [bool(state & 1 << i) for i in range(9)]
