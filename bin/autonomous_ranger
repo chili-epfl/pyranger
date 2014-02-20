@@ -19,7 +19,10 @@ if __name__ == "__main__":
 
     with get_robot() as robot:
 
-        logger.info("Waiting for the lolette...")
-        robot.wait("lolette")
-        logger.info("Ok! Sneak in!")
+        logger.info("Waiting for the lolette to be removed...")
+        robot.wait("lolette", value = False)
+        logger.info("Ok! Let's start!")
         robot.sneak_in()
+        robot.speed(30, 30)
+        robot.wait("ir_center", below = 0.3)
+        robot.speed(0,0)
