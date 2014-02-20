@@ -18,4 +18,8 @@ if __name__ == "__main__":
     logger.info("Hello, I'm HAL2014, the Ranger Artificial Intelligence!")
 
     with get_robot() as robot:
+
+        logger.info("Waiting for the lolette...")
+        robot.wait("lolette")
+        logger.info("Ok! Sneak in!")
         robot.sneak_in()

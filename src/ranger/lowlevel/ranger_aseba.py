@@ -104,6 +104,13 @@ class _RangerLowLevel():
         self.state["freq_neuil"] = 0.0
         self.state["freq_rab"] = 0.0
 
+        # Condition variable that can be used to wait
+        # until the next update of a given Aseba node
+        self.main_update = threading.Condition()
+        self.neuil_update = threading.Condition()
+        self.rab_update = threading.Condition()
+        self.update = threading.Condition() # get notified when any node is updated
+
         self.med_thread = threading.Thread(target=self.med.run)
         self.med_thread.start()
 
@@ -120,30 +127,6 @@ class _RangerLowLevel():
         for action in self.available_actions():
             setattr(self, action.__name__, partial(action, self))
             logger.info("Added " + action.__name__ + " as available action.")
-
-    def available_actions(self):
-        """ Iterate over all loaded modules, and retrieve actions (ie functions
-        with the @action decorator).
-        """
-        actions = []
-        path = sys.modules["ranger.actions"].__path__
-        for loader, module_name, is_pkg in  pkgutil.walk_packages(path):
-            m = sys.modules["ranger.actions." + module_name]
-            for member in [getattr(m, fn) for fn in dir(m)]:
-                if hasattr(member, "_action"):
-                    actions.append(member)
-
-        return actions
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.close()
-
-    def close(self):
-        self.med.close()
-        self.med_thread.join()
 
     def lefteye(self, x, y):
         self.eyes(lx=x, ly=y, rx=0, ry=0)
@@ -195,6 +178,40 @@ class _RangerLowLevel():
             if wait_duration > MAX_WAIT:
                 raise Exception("The robot does not transmit its state!!")
 
+    def wait(self, var, value = True, above = None, below = None):
+        """ waits until the state value 'var' fulfill some condition:
+                - if 'above' is set, until var > above
+                - if 'below' is set, until var < below
+                - else if value is set (default to True), until var = value
+        """
+        if var not in self.state:
+            raise Exception("%s is not part of the robot state" % var)
+        
+        if above is not None:
+            if self.state[var] > above: return
+
+            self.update.acquire()
+            while not self.state[var] > above:
+                self.update.wait()
+            self.update.release()
+
+        elif below is not None:
+            if self.state[var] < below: return
+
+            self.update.acquire()
+            while not self.state[var] < below:
+                self.update.wait()
+            self.update.release()
+
+        else:
+            if self.state[var] == value: return
+
+            self.update.acquire()
+            while not self.state[var] == value:
+                self.update.wait()
+            self.update.release()
+
+
     def _process_main_feedback(self, msg, with_encoders = False):
         self.state["accelerometer"] = [msg[0], msg[1], msg[2]]
         self.state["sharp1"] = self.filtered("ir_sharp1", linear_interpolation(msg[3], GP2Y0A41SK0F))
@@ -223,6 +240,13 @@ class _RangerLowLevel():
 
         self.state["freq_main"] = self.med.events_freq["mainFeedback"]
 
+        self.update.acquire()
+        self.main_update.acquire()
+        self.update.notifyAll()
+        self.main_update.notifyAll()
+        self.update.release()
+        self.main_update.release()
+
     def _process_neuil_feedback(self, msg):
 
         self.state["ir_left"] = self.filtered("ir_left", linear_interpolation(msg[0], GP2Y0A41SK0F))
@@ -233,6 +257,14 @@ class _RangerLowLevel():
         self.state["scale"] = self.filtered("scale", linear_interpolation(msg[4], SCALE))
 
         self.state["freq_neuil"] = self.med.events_freq["neuilFeedback"]
+
+        self.update.acquire()
+        self.neuil_update.acquire()
+        self.update.notifyAll()
+        self.neuil_update.notifyAll()
+        self.update.release()
+        self.neuil_update.release()
+
 
     def _process_rab_feedback(self, msg):
         id = msg[0]
@@ -245,6 +277,14 @@ class _RangerLowLevel():
         self.beacons[id] = beacon
 
         self.state["freq_rab"] = self.med.events_freq["receiverFeedback"]
+
+        self.update.acquire()
+        self.rab_update.acquire()
+        self.update.notifyAll()
+        self.rab_update.notifyAll()
+        self.update.release()
+        self.rab_update.release()
+
 
     def _send_evt(self, id, *args, **kwargs):
 
@@ -286,6 +326,30 @@ class _RangerLowLevel():
         filter = self.filteredvalues.setdefault(name, valuefilter())
         filter.append(val)
         return filter.get()
+
+    def available_actions(self):
+        """ Iterate over all loaded modules, and retrieve actions (ie functions
+        with the @action decorator).
+        """
+        actions = []
+        path = sys.modules["ranger.actions"].__path__
+        for loader, module_name, is_pkg in  pkgutil.walk_packages(path):
+            m = sys.modules["ranger.actions." + module_name]
+            for member in [getattr(m, fn) for fn in dir(m)]:
+                if hasattr(member, "_action"):
+                    actions.append(member)
+
+        return actions
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def close(self):
+        self.med.close()
+        self.med_thread.join()
 
 
 class Beacon:
