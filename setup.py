@@ -12,7 +12,7 @@ setup(name='ranger2',
       author_email='severin.lemaignan@epfl.ch',
       package_dir = {'': 'src'},
       packages=['ranger', 'ranger.lowlevel', 'ranger.actions', 'ranger.helpers'],
-      scripts=['bin/ranger_monitor'], 
+      scripts=['bin/ranger_monitor', 'bin/autonomous_ranger'], 
       #data_files=[
       #            ('share/doc/pyrobots', ['AUTHORS', 'LICENSE', 'README'])]
       )

@@ -1,0 +1,13 @@
+#! /usr/bin/env python
+
+import logging;logger = logging.getLogger("ranger")
+logging.basicConfig()
+
+from ranger import get_robot
+from ranger.actions.look import *
+
+if __name__ == "__main__":
+    logger.info("Hello, I'm HAL2014, the Ranger Artificial Intelligence!")
+
+    with get_robot() as robot:
+        robot.sneak_in()
