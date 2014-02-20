@@ -1,7 +1,15 @@
 #! /usr/bin/env python
 
 import logging;logger = logging.getLogger("ranger")
-logging.basicConfig()
+logger.setLevel(logging.DEBUG)
+
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
+console.setFormatter(formatter)
+
+logger.addHandler(console)
+
 
 from ranger import get_robot
 from ranger.actions.look import *
