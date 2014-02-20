@@ -4,8 +4,8 @@ import math,time
 import copy
 
 from medulla import Medulla
-from helpers import valuefilter
-from data_conversion import *
+from ranger.helpers.helpers import valuefilter
+from ranger.helpers.data_conversion import *
 
 import threading
 
