@@ -267,23 +267,30 @@ class _RangerLowLevel():
 
 
     def _process_rab_feedback(self, msg):
+        if not hasattr(self, "rab_plot"):
+            from ranger.helpers.plot import Plot
+            self.rab_plot = Plot(min_y = -2 * math.pi, max_y = 2 * math.pi)
+
         id = msg[0]
 
-        beacon = Beacon(id = id,
-                distance = msg[2],
-                angle = msg[1],
-                data = [msg[3+i] for i in range(7)])
+        distance = msg[2]
+        if distance > 0: # may be zero in case of error (somewhere...)
+            beacon = Beacon(id = id,
+                    distance = msg[2],
+                    angle = msg[1],
+                    data = [msg[3+i] for i in range(7)])
+            self.rab_plot.add(beacon.angle)
 
-        self.beacons[id] = beacon
+            self.beacons[id] = beacon
 
-        self.state["freq_rab"] = self.med.events_freq["receiverFeedback"]
+            self.state["freq_rab"] = self.med.events_freq["receiverFeedback"]
 
-        self.update.acquire()
-        self.rab_update.acquire()
-        self.update.notifyAll()
-        self.rab_update.notifyAll()
-        self.update.release()
-        self.rab_update.release()
+            self.update.acquire()
+            self.rab_update.acquire()
+            self.update.notifyAll()
+            self.rab_update.notifyAll()
+            self.update.release()
+            self.rab_update.release()
 
 
     def _send_evt(self, id, *args, **kwargs):
@@ -355,6 +362,7 @@ class _RangerLowLevel():
 class Beacon:
 
     OBSOLETE_AFTER = 5 #seconds
+
 
     def __init__(self, id, distance, angle, data):
 
