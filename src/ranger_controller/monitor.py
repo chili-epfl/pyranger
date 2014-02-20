@@ -36,6 +36,9 @@ class Monitor:
         if not silent:
             self.out = ConsoleTK(height = 12)
 
+        self.eyes = [0, 0, 0, 0]
+        self.speed = [0, 0]
+
     def __enter__(self):
 
         if not self.silent:
@@ -125,61 +128,61 @@ class Monitor:
         self.out.label("Freq. main: %4.1fHz | Freq. neuil: %4.1fHz | Freq. R&B: %4.1fHz" % (robot.freq_main, robot.freq_neuil, robot.freq_rab))
 
 
-    def lowlevel_emulator(self, key):
-        global main_msg, neuil_msg
+    def controller(self, key):
 
         robot = self.robot
 
-        if key == "l": # lolette
-            neuil_msg[3] = int(not bool(neuil_msg[3])) # toggle...
-            robot.neuil_msg = neuil_msg
-        elif key == " ": # bumper
-            main_msg[6] = int(not bool(main_msg[6])) # toggle...
-            robot.main_msg = main_msg
-        elif key == "+": # scale ++
-            neuil_msg[4] += 0.1
-            robot.neuil_msg = neuil_msg
-        elif key == "-": # scale --
-            neuil_msg[4] -= 0.1
-            robot.neuil_msg = neuil_msg
-        elif key == "b": # toggle battery level
-            if robot.battery > BATTERY_LOW_THRESHOLD:
-                main_msg[5] = int(0.5 * BATTERY_LOW_THRESHOLD)
-                robot.main_msg = main_msg
-            else:
-                main_msg[5] = int(1.1 * BATTERY_LOW_THRESHOLD)
-                robot.main_msg = main_msg
+
+        if key == "w":
+            self.eyes[1] += 5
+            robot.eyes(*self.eyes)
+        elif key == "s":
+            self.eyes[1] -= 5
+            robot.eyes(*self.eyes)
+        elif key == "a":
+            self.eyes[0] += 5
+            robot.eyes(*self.eyes)
+        elif key == "d":
+            self.eyes[0] -= 5
+            robot.eyes(*self.eyes)
+        elif key == "t":
+            self.eyes[3] += 5
+            robot.eyes(*self.eyes)
+        elif key == "g":
+            self.eyes[3] -= 5
+            robot.eyes(*self.eyes)
+        elif key == "f":
+            self.eyes[2] += 5
+            robot.eyes(*self.eyes)
+        elif key == "h":
+            self.eyes[2] -= 5
+            robot.eyes(*self.eyes)
 
 
-        # motor control
+
         elif key == self.out.ARROW_UP:
-            main_msg[7] += 0.1
-            main_msg[8] += 0.1
-            robot.main_msg = main_msg
+            self.speed[0] += 5
+            self.speed[1] += 5
+            robot.speed(*self.speed)
+
         elif key == self.out.ARROW_DOWN:
-            main_msg[7] -= 0.1
-            main_msg[8] -= 0.1
-            robot.main_msg = main_msg
+            self.speed[0] -= 5
+            self.speed[1] -= 5
+            robot.speed(*self.speed)
+
         elif key == self.out.ARROW_LEFT:
-            main_msg[7] -= 0.1
-            main_msg[8] += 0.1
-            robot.main_msg = main_msg
+            self.speed[0] += 5
+            self.speed[1] -= 5
+            robot.speed(*self.speed)
+
         elif key == self.out.ARROW_RIGHT:
-            main_msg[7] += 0.1
-            main_msg[8] -= 0.1
-            robot.main_msg = main_msg
+            self.speed[0] -= 5
+            self.speed[1] += 5
+            robot.speed(*self.speed)
 
-        # range and bearing
-        elif key == "1":  # BEACON
-            robot.rab_msg = [ID["BEACON"], 960, 734, 0, 0, 0, 0, 0, 0, 0]
-        elif key == "2": # STATION 1
-            robot.rab_msg = [ID["STATION1"], 302, 74, 0, 0, 0, 0, 0, 0, 0]
-        elif key == "3": # ROBOT 2
-            robot.rab_msg = [ID["ROBOT2"], 402, 1704, 0, 0, 0, 0, 0, 0, 0]
-        elif key == "4": # STATION 2
-            robot.rab_msg = [ID["STATION2"], 2002, 504, 0, 0, 0, 0, 0, 0, 0]
-
-
+        elif key == " ":
+            self.speed = [0,0]
+            robot.speed(0,0)
 
 
 
@@ -190,23 +193,24 @@ class Monitor:
 
         key = ""
 
-        while self.running and key != "q":
+        try:
+            while self.running and key != "q":
 
-            if not self.silent:
-                key = self.out.get_keypress()
-                #self.lowlevel_emulator(key)
+                if not self.silent:
+                    key = self.out.get_keypress()
+                    self.controller(key)
 
-                self.out.moveto(0,0)
-                self.showstatus()
-            time.sleep(0.02)
+                    self.out.moveto(0,0)
+                    self.showstatus()
+                time.sleep(0.02)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.robot.speed(0,0)
 
 
 if __name__ == '__main__':
 
     with Monitor(silent = False) as monitor:
-
-        try:
             monitor.run()
-        except KeyboardInterrupt:
-            pass
 

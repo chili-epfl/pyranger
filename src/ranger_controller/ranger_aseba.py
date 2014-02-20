@@ -117,13 +117,38 @@ class _RangerLowLevel():
         self.med_thread.join()
 
     def lefteye(self, x, y):
-        self._send_evt("EYE", leyex = x, leyey = y, reyex = 0, reyey = 0)
+        self.eyes(lx=x, ly=y, rx=0, ry=0)
 
     def righteye(self, x, y):
-        self._send_evt("EYE", leyex = 0, leyey = 0, reyex = x, reyey = y)
+        self.eyes(lx=0, ly=0, rx=x, ry=y)
 
-    def eyes(self, x, y):
-        self._send_evt("EYE", leyex = x, leyey = y, reyex = x, reyey = y)
+    def eyes(self, lx, ly, 
+                   rx = None, ry = None, 
+                   l_upper_lid = 100, l_lower_lid = None, r_upper_lid = None, r_lower_lid = None):
+
+        if rx is None:
+            rx = -lx # negative because positive values converge toward center
+        if ry is None:
+            ry = ly
+        if l_lower_lid is None:
+            l_lower_lid = l_upper_lid
+        if r_upper_lid is None:
+            r_upper_lid = l_upper_lid
+        if r_lower_lid is None:
+            r_lower_lid = l_lower_lid
+
+        self._send_evt("neuilEvent", lx, ly,
+                                     rx, ry,
+                                     l_upper_lid, l_lower_lid,
+                                     r_upper_lid, r_lower_lid)
+
+    def speed(self, l, r = None):
+        if r is None:
+            r = -l
+        else:
+            r = -r
+
+        self._send_evt("setSpeed", l, r)
 
     def get_full_state(self):
         """Blocks until the full state of the robot has been
@@ -192,9 +217,14 @@ class _RangerLowLevel():
 
         self.state["freq_rab"] = self.med.events_freq["receiverFeedback"]
 
-    def _send_evt(self, id, **kwarg):
-        logger.debug("Event %s(%s) sent." % (id, str(kwarg)))
-        self.med.send_event(id, kwarg.values())
+    def _send_evt(self, id, *args, **kwargs):
+
+        if not args:
+            args = kwargs.values()
+            logger.debug("Event %s(%s) sent." % (id, str(kwargs)))
+        else:
+            logger.debug("Event %s(%s) sent." % (id, str(args)))
+        self.med.send_event(id, args)
 
     def _add_property(self, name, writable):
 
