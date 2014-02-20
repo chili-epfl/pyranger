@@ -1,13 +1,14 @@
 import logging; logger = logging.getLogger("aseba")
 
-import math,time
-import copy
+import math, time
+import pkgutil, sys
+import threading
+from functools import partial
 
 from medulla import Medulla
 from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
 
-import threading
 
 ID = dict(BEACON = 0,
           ROBOT1 = 1,
@@ -107,6 +108,38 @@ class _RangerLowLevel():
         self.med_thread.start()
 
         self.get_full_state()
+
+        # Import all modules under robots/actions/
+        import ranger.actions
+        path = sys.modules['ranger.actions'].__path__
+        for loader, module_name, is_pkg in  pkgutil.walk_packages(path):
+            __import__('ranger.actions.' + module_name)
+
+        # Dynamically add available actions (ie, actions defined with @action in
+        # actions/* submodules.
+        for action in self.available_actions():
+            setattr(self, action.__name__, partial(action, self))
+            logger.info("Added " + action.__name__ + " as available action.")
+
+    def available_actions(self):
+        """ Iterate over all loaded modules, and retrieve actions (ie functions
+        with the @action decorator).
+        """
+        actions = []
+        path = sys.modules["ranger.actions"].__path__
+        for loader, module_name, is_pkg in  pkgutil.walk_packages(path):
+            m = sys.modules["ranger.actions." + module_name]
+            for member in [getattr(m, fn) for fn in dir(m)]:
+                if hasattr(member, "_action"):
+                    actions.append(member)
+
+        return actions
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
 
     def close(self):
         self.med.close()

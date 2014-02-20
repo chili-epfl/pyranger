@@ -55,6 +55,7 @@ def action(fn):
 
     innerfunc.__name__ = fn.__name__
     innerfunc.__doc__ = fn.__doc__
+    innerfunc._action = True
 
     return innerfunc
 
