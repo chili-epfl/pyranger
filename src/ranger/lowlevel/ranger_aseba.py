@@ -13,8 +13,8 @@ from ranger.helpers.data_conversion import *
 ID = dict(BEACON = 0,
           ROBOT1 = 1,
           ROBOT2 = 2,
-          STATION1 = 3,
-          STATION2 = 4)
+          STATION1 = 4,
+          STATION2 = 5)
 
 ID["MYSTATION"] = ID["STATION1"] # TODO multirobot
 
