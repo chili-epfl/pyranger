@@ -71,9 +71,9 @@ class Monitor:
                              autocolor = True)
 
         self.out.moveto(0,2)
-        self.out.absolutebar(robot.velocity_left, 3, "rad.s^-1", label = " Left wheel")
+        self.out.absolutebar(robot.velocity_left, 100, "%", label = " Left wheel", minvalue = -100)
         self.out.relmoveto(0,1)
-        self.out.absolutebar(robot.velocity_right, 3, "rad.s^-1", label = "Right wheel")
+        self.out.absolutebar(robot.velocity_right, 100, "%", label = "Right wheel", minvalue = -100)
 
         ###################################################
         ### Beacons
