@@ -4,7 +4,7 @@ import math,time
 import copy
 
 from medulla import Medulla
-from helpers import singleton
+from helpers import valuefilter
 from data_conversion import *
 
 import threading
@@ -75,6 +75,7 @@ class _RangerLowLevel():
     def __init__(self):
 
         self.state = {}
+        self.filteredvalues = {} # holds the filters for sensors that need filtering (like scale, IR sensors...)
         self.beacons = {}
 
         self._init_accessors()
@@ -142,9 +143,11 @@ class _RangerLowLevel():
 
     def _process_main_feedback(self, msg, with_encoders = False):
         self.state["accelerometer"] = [msg[0], msg[1], msg[2]]
-        self.state["sharp1"] = msg[3]
-        self.state["sharp2"] = msg[4]
-        self.state["battery"] = msg[5]
+        self.state["sharp1"] = self.filtered("ir_sharp1", linear_interpolation(msg[3], GP2Y0A41SK0F))
+
+        self.state["sharp2"] = self.filtered("ir_sharp2", linear_interpolation(msg[4], GP2Y0A41SK0F))
+
+        self.state["battery"] = self.filtered("battery", msg[5])
         self.state["bumper"] = msg[6]
         self.state["velocity_left"] = msg[7]
         self.state["velocity_right"] = msg[8]
@@ -167,11 +170,13 @@ class _RangerLowLevel():
         self.state["freq_main"] = self.med.events_freq["mainFeedback"]
 
     def _process_neuil_feedback(self, msg):
-        self.state["ir_left"] = linear_interpolation(msg[0], GP2Y0A41SK0F)
-        self.state["ir_center"] = linear_interpolation(msg[1], GP2Y0A02YK)
-        self.state["ir_right"] = linear_interpolation(msg[2], GP2Y0A41SK0F)
+
+        self.state["ir_left"] = self.filtered("ir_left", linear_interpolation(msg[0], GP2Y0A41SK0F))
+        self.state["ir_center"] = self.filtered("ir_center", linear_interpolation(msg[1], GP2Y0A02YK))
+        self.state["ir_right"] = self.filtered("ir_right", linear_interpolation(msg[2], GP2Y0A41SK0F))
         self.state["lolette"] = msg[3]
-        self.state["scale"] = msg[4]
+
+        self.state["scale"] = self.filtered("scale", linear_interpolation(msg[4], SCALE))
 
         self.state["freq_neuil"] = self.med.events_freq["neuilFeedback"]
 
@@ -214,6 +219,15 @@ class _RangerLowLevel():
             # the creation of the setters,getters must take place in a separate
             # function, else they all refer to the same field name... Python internals...
             self._add_property(name, writable)
+
+    def filtered(self, name, val):
+        """ Helper to easily filter values (uses an accumulator to average a given 'name' quantity)
+        """
+
+        filter = self.filteredvalues.setdefault(name, valuefilter())
+        filter.append(val)
+        return filter.get()
+
 
 class Beacon:
 

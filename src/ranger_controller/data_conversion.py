@@ -23,17 +23,23 @@ GP2Y0A41SK0F = [
                 [0.4  , 300],
                 [0.5  ,   0]]
 
+SCALE = [
+          [0, 1280],
+          [25, 36480]
+        ]
 
 def linear_interpolation(val, refs):
-    if val > refs[0][1]:
+    negative = (refs[0][1] > refs[-1][1])
+
+    if (negative and val > refs[0][1]) or (not negative and val < refs[0][1]):
         return refs[0][0]
 
     pd, pv = refs[0]
 
     for d, v in refs:
-        if val > v:
-            a = (pd - d) / (pv - v)
-            b = (d * pv - v * pd) / (pv -v)
+        if (negative and val > v) or (not negative and val < v):
+            a = float(pd - d) / (pv - v)
+            b = float(d * pv - v * pd) / (pv -v)
             return a * val + b
         pd, pv = d, v
 
