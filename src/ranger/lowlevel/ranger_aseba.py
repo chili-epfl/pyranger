@@ -209,6 +209,21 @@ class _RangerLowLevel():
 
         self._send_evt("setSpeed", l, r)
 
+    def distanceto(self, x, y):
+        return math.sqrt(math.pow(self.x - x, 2) + \
+                         math.pow(self.y - y, 2))
+
+
+    def angleto(self, x, y):
+        return math.atan2(y - self.y, x - self.x)
+
+    def normalize_angle(self, angle):
+        """ Returns equivalent angle such as  -pi < angle <= pi
+        """
+        angle = angle % (2 * math.pi) # => angle > 0
+        return angle if angle <= math.pi else (-math.pi + angle % math.pi)
+
+
     def get_full_state(self):
         """Blocks until the full state of the robot has been
         received from the low-level.
