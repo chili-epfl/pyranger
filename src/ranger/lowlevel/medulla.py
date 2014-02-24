@@ -80,11 +80,11 @@ class Medulla:
         size = len(dbus_array)
         return [str(dbus_array[x]) for x in range(0,size)]
 
-    def set_variable(self, node, var, value):
+    def set(self, node, var, value):
         if self.dummy: return
         self.network.SetVariable(node, var, value)
 
-    def get_variable(self, node, var):
+    def get(self, node, var):
         if self.dummy: return [0] * 10
         dbus_array = self.network.GetVariable(node, var)
         size = len(dbus_array)
