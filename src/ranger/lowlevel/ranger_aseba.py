@@ -5,7 +5,7 @@ import pkgutil, sys
 import threading
 from functools import partial
 
-from medulla import Medulla
+from aseba import Aseba
 from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
@@ -94,24 +94,24 @@ class _RangerLowLevel():
         #                       ASEBA initialization
         #######################################################################
 
-        # init medulla
-        self.med = Medulla(dummy = dummy)
+        # init Aseba
+        self.aseba = Aseba(dummy = dummy)
 
         # Basic check to be sure all the Ranger's ASEBA nodes are up and running
-        nodes = self.med.get_nodes_list()
+        nodes = self.aseba.get_nodes_list()
         if not dummy and len(nodes) != 3:
             logger.error("One of the Ranger Aseba node is not up!!")
             logger.debug("List of active nodes: {0}".format(nodes))
             raise Exception("Missing Aseba node")
 
-        # (Re-)load the aesl scripts, mandatory for medulla to know about
+        # (Re-)load the aesl scripts, mandatory for Aseba to know about
         # the list of available events
-        self.med.load_scripts(RANGER_ASEBA_SCRIPT)
+        self.aseba.load_scripts(RANGER_ASEBA_SCRIPT)
 
         # Register callbacks for the main events of the 3 nodes
-        self.med.on_event("mainFeedback", self._process_main_feedback)
-        self.med.on_event("neuilFeedback", self._process_neuil_feedback)
-        self.med.on_event("receiverFeedback", self._process_rab_feedback)
+        self.aseba.on_event("mainFeedback", self._process_main_feedback)
+        self.aseba.on_event("neuilFeedback", self._process_neuil_feedback)
+        self.aseba.on_event("receiverFeedback", self._process_rab_feedback)
         self.state["freq_main"] = 0.0
         self.state["freq_neuil"] = 0.0
         self.state["freq_rab"] = 0.0
@@ -124,8 +124,8 @@ class _RangerLowLevel():
         self.update = threading.Condition() # get notified when any node is updated
 
         # Starts DBus thread (responsible for receiving events)
-        self.med_thread = threading.Thread(target=self.med.run)
-        self.med_thread.start()
+        self.aseba_thread = threading.Thread(target=self.aseba.run)
+        self.aseba_thread.start()
 
         # Asks the nodes to send their events
         self._send_evt("enableFeedback", enable = 1)
@@ -134,8 +134,8 @@ class _RangerLowLevel():
         # Wait until we hear about the 2 main nodes ('main' and 'neuil')
         self.get_full_state()
 
-        #self.med.set("main", "mot1.pid.enable", 1)
-        #self.med.set("main", "mot2.pid.enable", 1)
+        #self.aseba.set("main", "mot1.pid.enable", 1)
+        #self.aseba.set("main", "mot2.pid.enable", 1)
 
         #######################################################################
         #                   End of ASEBA initialization
@@ -307,7 +307,7 @@ class _RangerLowLevel():
         self.state["motor_current_left"] = msg[13 if not with_encoders else 17]
         self.state["motor_current_right"] = msg[14 if not with_encoders else 18]
 
-        self.state["freq_main"] = self.med.events_freq["mainFeedback"]
+        self.state["freq_main"] = self.aseba.events_freq["mainFeedback"]
 
         self.update.acquire()
         self.main_update.acquire()
@@ -325,7 +325,7 @@ class _RangerLowLevel():
 
         self.state["scale"] = self.filtered("scale", linear_interpolation(msg[4], SCALE))
 
-        self.state["freq_neuil"] = self.med.events_freq["neuilFeedback"]
+        self.state["freq_neuil"] = self.aseba.events_freq["neuilFeedback"]
 
         self.update.acquire()
         self.neuil_update.acquire()
@@ -354,7 +354,7 @@ class _RangerLowLevel():
 
             self.beacons[id] = beacon
 
-            self.state["freq_rab"] = self.med.events_freq["receiverFeedback"]
+            self.state["freq_rab"] = self.aseba.events_freq["receiverFeedback"]
 
             self.update.acquire()
             self.rab_update.acquire()
@@ -371,7 +371,7 @@ class _RangerLowLevel():
             logger.debug("Event %s(%s) sent." % (id, str(kwargs)))
         else:
             logger.debug("Event %s(%s) sent." % (id, str(args)))
-        self.med.send_event(id, args)
+        self.aseba.send_event(id, args)
 
     def _add_property(self, name, writable):
 
@@ -426,8 +426,8 @@ class _RangerLowLevel():
         self.close()
 
     def close(self):
-        self.med.close()
-        self.med_thread.join()
+        self.aseba.close()
+        self.aseba_thread.join()
 
 
 class Beacon:
