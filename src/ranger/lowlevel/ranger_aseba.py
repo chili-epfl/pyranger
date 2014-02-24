@@ -267,10 +267,13 @@ class _RangerLowLevel():
 
 
     def _process_rab_feedback(self, msg):
-        if not hasattr(self, "rab_plot"):
-            from ranger.helpers.plot import Plot
-            self.rab_plot = Plot(min_y = -2 * math.pi, max_y = 2 * math.pi)
-
+        """
+        msg[0]: beacon ID
+        msg[1]: angle where the beacon is seen, from the robot's R&B perspective
+        msg[2]: distance
+        msg[3]: angle where the robot is seen, from the beacon R&B perspective (ie, theta polar coord of robot in map)
+        msg[4]: distance where the robot is seen, from the beacon R&B perspective (ie, r polar coord of robot in map)
+        """
         id = msg[0]
 
         distance = msg[2]
@@ -279,7 +282,6 @@ class _RangerLowLevel():
                     distance = msg[2],
                     angle = msg[1],
                     data = [msg[3+i] for i in range(7)])
-            self.rab_plot.add(beacon.angle)
 
             self.beacons[id] = beacon
 
@@ -360,6 +362,26 @@ class _RangerLowLevel():
 
 
 class Beacon:
+    """
+                               ^
+                               |
+                               |     /
+                              /|.   /
+                             / | `+.
+                     Robot  /  |.'  `.
+                           /   /    /
+                          `-..-'`. /
+                          .-'`.   `.
+                   r  _.-'     `-/  `.
+                   .-'
+    Beacon      .-'
+    ,---.    .-'--.
+   /     _.-'      | theta
+  (   ............,.........>
+   \     /
+    `---'
+
+    """
 
     OBSOLETE_AFTER = 5 #seconds
 
@@ -367,22 +389,15 @@ class Beacon:
     def __init__(self, id, distance, angle, data):
 
         self.update = time.time()
-
         self.id = id
 
-        self.rawangle = math.pi * angle / 1800.
+        self.theta = - math.pi * data[0] / 1800. + 2 * math.pi
 
-        self.angle = math.atan2(
-                        math.sin(self.rawangle),
-                        math.cos(self.rawangle)
-                        )
+        # angle at which the beacon is seen by the robot's RaB
+        self.orientation = math.atan2(math.sin(math.pi * angle / 1800.),
+                                      math.cos(math.pi * angle / 1800.))
 
-        self.distance = distance / 1000.
-        self.strength = 1. / ((distance/1000.)**2)
-
-        self.data = data
-
-        self.own_orientation = - math.pi * data[0] / 1800. + 2 * math.pi
+        self.r = data[1] / 1000.  # in meters
 
     def obsolete(self):
         if time.time() - self.update > self.OBSOLETE_AFTER:
