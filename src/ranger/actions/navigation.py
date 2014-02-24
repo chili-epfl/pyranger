@@ -1,3 +1,5 @@
+import logging; logger = logging.getLogger("ranger." + __name__)
+
 import time, math
 from random import uniform as rand
 from ranger.decorators import action, lock
@@ -28,7 +30,6 @@ def face_beacon(robot, beacon_id):
 
 
 @action
-@lock(WHEELS)
 def face(robot, x, y, speed = 0.01, back = False):
     """ Rotates the robot to face a given target point, in /odom frame.
 
@@ -39,11 +40,7 @@ def face(robot, x, y, speed = 0.01, back = False):
     if back:
         angle = robot.normalize_angle(angle + math.pi)
 
-    duration = abs(angle / speed)
-
-    robot.speed(w = speed if angle > 0 else -speed)
-
-    time.sleep(duration)
+    robot.turn(angle).result()
 
 @action
 def back(robot, x, y, speed = 0.01):
@@ -51,7 +48,38 @@ def back(robot, x, y, speed = 0.01):
 
 @action
 @lock(WHEELS)
-def goto(robot, x, y, v = 1., w = 0.01, epsilon = 0.1, backwards = False):
+def move(robot, distance, v = 0.5):
+    """ Move forward (or backward if distance is negative) of a given distance.
+
+    For now, open-loop.
+
+    :param distance: distance to move, in meters
+    :param v: (default: 0.5) linear velocity
+    """
+    duration = abs(distance / v)
+    robot.speed(v if distance > 0 else -v)
+    time.sleep(duration)
+    robot.speed(0)
+
+@action
+@lock(WHEELS)
+def turn(robot, angle, w = 0.01):
+    """ Turns of a given angle.
+
+    For now, open-loop.
+
+    :param angle: angle to turn, in radians
+    :param w: (default: 0.01) rotation velocity
+    """
+
+    duration = abs(angle / w)
+    robot.speed(w = w if angle > 0 else -w)
+    time.sleep(duration)
+    robot.speed(0)
+
+@action
+@lock(WHEELS)
+def goto(robot, x, y, v = 0.5, w = 0.01, epsilon = 0.1, backwards = False):
     """
 
     :param x, y: target destination, in meters in /odom frame
@@ -73,16 +101,75 @@ def goto(robot, x, y, v = 1., w = 0.01, epsilon = 0.1, backwards = False):
     
     while True:
         dist = robot.distanceto(x, y)
-        if dit < epsilon:
+        if dist < epsilon:
+            logger.info("Reached target")
             return
         if dist > prev_dist: # we are not getting closer anymore!
 
             robot.speed(0)
             WHEELS.release()
-            action = robot.face(x, y, w, back = backwards)
-            #waits until the robot faces the destination
-            action.result()
+            robot.face(x, y, w, back = backwards).result()
+            WHEELS.acquire()
+            robot.speed(v = v if not backwards else -v)
+
+
+        if robot.bumper:
+            logger.warning("Bumped into something!")
+            robot.speed(0)
+            WHEELS.release()
+            robot.resolve_collision().result()
+            face(x, y, w, back = backwards).result()
             WHEELS.acquire()
             robot.speed(v = v if not backwards else -v)
 
         time.sleep(0.1)
+
+@action
+def resolve_collision(robot):
+    """ Assumes the robot in colliding with something (bumper = True), 
+    tries to resolve the situation.
+
+    Procedure:
+        - if central IR does not detect anything, assume it's a low obstacle on the ground
+        - if central IR detect smthg, wait 2 sec, and check again. Obstacle may have been removed.
+        - else, try to bypass the obstacle by:
+            - moving backward, 
+            - checking with left and right IR what look like the most promising direction
+            - slowly move in that direction
+    """
+    WAIT_FOR_REMOVAL_DURATION = 2 #sec
+    DISTANCE_TO_OBSTACLE_THRESHOLD = 0.15 #distance to consider the collinding obstacle seen
+
+    #TODO: EMOTION
+    logger.info("Trying to resolve the collision...")
+    ir_dist = robot.ir_center
+    if ir_dist < DISTANCE_TO_OBSTACLE_THRESHOLD:
+        obstacle_seen = True
+        logger.info("Obstacle seen at %s" % ir_dist)
+    else:
+        obstacle_seen = False
+        logger.info("Obstacle not seen by IR. Low/thin object?")
+    
+    if obstacle_seen:
+        # wait 2 sec, in case the obstacle is removed
+        start = time.time()
+        while (time.time() - start) < WAIT_FOR_REMOVAL_DURATION:
+            #TODO: EMOTION -> hope obstacle removed
+            if robot.ir_center > DISTANCE_TO_OBSTACLE_THRESHOLD:
+                logger.info("Obstacle removed!")
+                #consider us as free again! youpi!
+                #TODO: EMOTION
+                return
+            time.sleep(0.2)
+
+    robot.move(-0.2).result() # backwards 20 cm
+
+    if robot.ir_left < robot.ir_right:
+        #go right!
+        robot.goto(x = 0, y = -1).result()
+        robot.turn(math.pi).result()
+    else:
+        #go left!
+        robot.goto(x = 0, y = 1).result()
+        robot.turn(-math.pi).result()
+

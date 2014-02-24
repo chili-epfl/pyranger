@@ -190,7 +190,7 @@ class _RangerLowLevel():
             >>> robot.speed(l = ..., r = ...)
 
         """
-        MAX_SPEED = 1 #m.s^-1
+        MAX_SPEED = .5 #m.s^-1
 
         if v or w:
             # control in (v,w)
