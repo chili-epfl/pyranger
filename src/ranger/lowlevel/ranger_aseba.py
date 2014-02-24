@@ -40,8 +40,11 @@ def _element_mul(list1, list2):
 def _element_add(list1, list2):
     return [ i + j for i, j in zip(list1, list2)] 
 
+def clamp(v, vmin, vmax):
+    return max(vmin, min(vmax, v))
+
 def _element_clip(list_i, min_val, max_val):
-    return [min(max(i, min_val), max_val) for i in list_i]
+    return [clamp(i, min_val, max_val) for i in list_i]
 
 
 class _RangerLowLevel():
@@ -81,15 +84,11 @@ class _RangerLowLevel():
         self.state = {}
         self.filteredvalues = {} # holds the filters for sensors that need filtering (like scale, IR sensors...)
         self.beacons = {}
+        self.odom = Odom()
 
         # creates accessors for each of the fields in STATE
         self._init_accessors()
 
-        self._update_rate = {"main": time.time(), 
-                             "neuil": time.time(), 
-                             "rab": time.time()}
-
-        self.odom = Odom()
 
         #######################################################################
         #                       ASEBA initialization
@@ -135,6 +134,9 @@ class _RangerLowLevel():
         # Wait until we hear about the 2 main nodes ('main' and 'neuil')
         self.get_full_state()
 
+        #self.med.set("main", "mot1.pid.enable", 1)
+        #self.med.set("main", "mot2.pid.enable", 1)
+
         #######################################################################
         #                   End of ASEBA initialization
         #######################################################################
@@ -178,11 +180,32 @@ class _RangerLowLevel():
                                      l_upper_lid, l_lower_lid,
                                      r_upper_lid, r_lower_lid)
 
-    def speed(self, l, r = None):
-        if r is None:
-            r = -l
+    def speed(self, l = None, r = None, v = None, w = None):
+        """ Set the motor's speed, in {m, rad}.s^-1.
+
+            Either call 
+            >>> robot.speed(v = ..., w = ...)
+
+            or:
+            >>> robot.speed(l = ..., r = ...)
+
+        """
+        MAX_SPEED = 1 #m.s^-1
+
+        if v or w:
+            # control in (v,w)
+            l, r = self.odom.twist_to_motors(v, w)
+        elif r or l:
+            if r is None:
+                r = l
+            elif l is None:
+                l = -r
         else:
-            r = -r
+            logger.warning("setSpeed called with no speed!")
+            return
+
+        l = clamp( l * 100. / MAX_SPEED, -100, 100)
+        r = clamp( -r * 100. / MAX_SPEED, -100, 100) # -r !
 
         self._send_evt("setSpeed", l, r)
 
