@@ -8,6 +8,8 @@ from functools import partial
 from medulla import Medulla
 from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
+from ranger.helpers.odom import Odom
+
 
 RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
 
@@ -56,7 +58,6 @@ class _RangerLowLevel():
         "touch_left":           False,  # 3x3 bool matrix, touch sensors left
         "touch_rear":           False,  # 3x3 bool matrix, touch sensors rear
         "touch_right":          False,  # 3x3 bool matrix, touchsensors right
-        "encoders":             False,  # motors' 4 encoders (LLRR), in tics
         "charging":             False,  # battery currently charging? (bool)
         "motor_current_left":   False,  # current in left motor, in mA
         "motor_current_right":  False,  # current in right motor, in mA
@@ -67,11 +68,11 @@ class _RangerLowLevel():
         "scale":                False,  # measured weight, in kg
         "freq_main":            False,  # update frequency of the main robot node
         "freq_neuil":           False,  # update frequency of the 'neuil' robot node
-        "freq_rab":             False   # update frequency of the 'Range and Bearing' robot node
-        "x":                    False   # x position of the robot, computed from odometry
-        "y":                    False   # y position of the robot, computed from odometry
-        "theta":                False   # orientation of the robot, computed from odometry
-        "v":                    False   # linear velocity, in robot's forward direction
+        "freq_rab":             False,  # update frequency of the 'Range and Bearing' robot node
+        "x":                    False,  # x position of the robot, computed from odometry
+        "y":                    False,  # y position of the robot, computed from odometry
+        "theta":                False,  # orientation of the robot, computed from odometry
+        "v":                    False,  # linear velocity, in robot's forward direction
         "w":                    False   # rotation velocity
         }
 
@@ -88,6 +89,7 @@ class _RangerLowLevel():
                              "neuil": time.time(), 
                              "rab": time.time()}
 
+        self.odom = Odom()
 
         #######################################################################
         #                       ASEBA initialization
@@ -128,6 +130,7 @@ class _RangerLowLevel():
 
         # Asks the nodes to send their events
         self._send_evt("enableFeedback", enable = 1)
+        self._send_evt("enableEncoders", enable = 1)
 
         # Wait until we hear about the 2 main nodes ('main' and 'neuil')
         self.get_full_state()
@@ -233,7 +236,7 @@ class _RangerLowLevel():
             self.update.release()
 
 
-    def _process_main_feedback(self, msg, with_encoders = False):
+    def _process_main_feedback(self, msg, with_encoders = True):
         self.state["accelerometer"] = [msg[0], msg[1], msg[2]]
         self.state["sharp1"] = self.filtered("ir_sharp1", linear_interpolation(msg[3], GP2Y0A41SK0F))
 
@@ -253,7 +256,14 @@ class _RangerLowLevel():
         self.state["touch_right"] = decompress_touch(msg[9])
 
         if with_encoders:
-            self.state["encoders"] = [msg[12], msg[13], msg[14], msg[15]]
+            # "encoders" = [msg[12], msg[13], msg[14], msg[15]]
+            self.odom.update(msg[12], msg[14])
+            x,y,th,v,w = self.odom.get()
+            self.state["x"] = x
+            self.state["y"] = y
+            self.state["theta"] = th
+            self.state["v"] = v
+            self.state["w"] = w
 
         self.state["charging"] = msg[12 if not with_encoders else 16]
         self.state["motor_current_left"] = msg[13 if not with_encoders else 17]
