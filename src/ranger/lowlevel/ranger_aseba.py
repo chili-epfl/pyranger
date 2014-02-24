@@ -9,6 +9,7 @@ from medulla import Medulla
 from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
 
+RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
 
 ID = dict(BEACON = 0,
           ROBOT1 = 1,
@@ -67,14 +68,20 @@ class _RangerLowLevel():
         "freq_main":            False,  # update frequency of the main robot node
         "freq_neuil":           False,  # update frequency of the 'neuil' robot node
         "freq_rab":             False   # update frequency of the 'Range and Bearing' robot node
+        "x":                    False   # x position of the robot, computed from odometry
+        "y":                    False   # y position of the robot, computed from odometry
+        "theta":                False   # orientation of the robot, computed from odometry
+        "v":                    False   # linear velocity, in robot's forward direction
+        "w":                    False   # rotation velocity
         }
 
-    def __init__(self):
+    def __init__(self, dummy = False):
 
         self.state = {}
         self.filteredvalues = {} # holds the filters for sensors that need filtering (like scale, IR sensors...)
         self.beacons = {}
 
+        # creates accessors for each of the fields in STATE
         self._init_accessors()
 
         self._update_rate = {"main": time.time(), 
@@ -82,10 +89,14 @@ class _RangerLowLevel():
                              "rab": time.time()}
 
 
-        dummy = False
+        #######################################################################
+        #                       ASEBA initialization
+        #######################################################################
+
         # init medulla
         self.med = Medulla(dummy = dummy)
-        #self.med = Medulla()
+
+        # Basic check to be sure all the Ranger's ASEBA nodes are up and running
         nodes = self.med.get_nodes_list()
         if not dummy and len(nodes) != 3:
             logger.error("One of the Ranger Aseba node is not up!!")
@@ -94,9 +105,9 @@ class _RangerLowLevel():
 
         # (Re-)load the aesl scripts, mandatory for medulla to know about
         # the list of available events
-        self.med.load_scripts("/home/lemaigna/src/ranger2/aseba/RangerMain.aesl")
-        self._send_evt("enableFeedback", enable = 1)
+        self.med.load_scripts(RANGER_ASEBA_SCRIPT)
 
+        # Register callbacks for the main events of the 3 nodes
         self.med.on_event("mainFeedback", self._process_main_feedback)
         self.med.on_event("neuilFeedback", self._process_neuil_feedback)
         self.med.on_event("receiverFeedback", self._process_rab_feedback)
@@ -111,10 +122,20 @@ class _RangerLowLevel():
         self.rab_update = threading.Condition()
         self.update = threading.Condition() # get notified when any node is updated
 
+        # Starts DBus thread (responsible for receiving events)
         self.med_thread = threading.Thread(target=self.med.run)
         self.med_thread.start()
 
+        # Asks the nodes to send their events
+        self._send_evt("enableFeedback", enable = 1)
+
+        # Wait until we hear about the 2 main nodes ('main' and 'neuil')
         self.get_full_state()
+
+        #######################################################################
+        #                   End of ASEBA initialization
+        #######################################################################
+
 
         # Import all modules under robots/actions/
         import ranger.actions
