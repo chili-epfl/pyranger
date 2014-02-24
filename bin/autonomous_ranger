@@ -10,19 +10,19 @@ console.setFormatter(formatter)
 
 logger.addHandler(console)
 
-
+from ranger.lowlevel.ranger_aseba import ID
 from ranger import get_robot
 from ranger.actions.look import *
 
 if __name__ == "__main__":
     logger.info("Hello, I'm HAL2014, the Ranger Artificial Intelligence!")
 
-    with get_robot() as robot:
+    with get_robot(dummy = True) as robot:
 
         logger.info("Waiting for the lolette to be removed...")
         robot.wait("lolette", value = False)
         logger.info("Ok! Let's start!")
         robot.sneak_in()
-        robot.speed(30, 30)
+        face = robot.face_beacon(ID["MYSTATION"])
         robot.wait("ir_center", below = 0.3)
-        robot.speed(0,0)
+        robot.speed(0)

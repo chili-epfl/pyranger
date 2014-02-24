@@ -1,5 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
+import threading
+
 from resources import *
+from ranger.introspection import introspection
 
 executor = ThreadPoolExecutor(max_workers = 5)
 
@@ -45,12 +48,24 @@ def action(fn):
                     if not got_the_lock:
                         raise ResourceLockedError("Required resource <%s> locked while running %s" % ([name for name in globals() if globals()[name] is res][0], fn.__name__))
 
+        if introspection:
+            introspection.action_starting(fn.__name__, threading.current_thread().ident)
+            current_threads = set([t.ident for t in threading.enumerate()])
+
         if args and kwargs:
             future = executor.submit(lockawarefn, *args, **kwargs)
         elif args:
             future = executor.submit(lockawarefn, *args)
         else:
             future = executor.submit(lockawarefn)
+
+        if introspection:
+            # hack to get the ID of the newly created thread. May fail (ie, non unique value)
+            # if two threads are created in parallel
+            new_threads = set([t.ident for t in threading.enumerate()]) - current_threads
+            introspection.action_started(fn.__name__, new_threads.pop() if len(new_threads) == 1 else None)
+            future.add_done_callback(lambda x : introspection.action_finished(fn.__name__, threading.current_thread().ident))
+
         return future
 
     innerfunc.__name__ = fn.__name__

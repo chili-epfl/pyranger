@@ -1,4 +1,4 @@
-import logging; logger = logging.getLogger("aseba")
+import logging; logger = logging.getLogger("ranger.lowlevel")
 
 import math, time
 import pkgutil, sys
@@ -9,7 +9,7 @@ from aseba import Aseba
 from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
-
+from ranger.introspection import introspection
 
 RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
 
@@ -24,13 +24,13 @@ ID["MYSTATION"] = ID["STATION1"] # TODO multirobot
 BATTERY_LOW_THRESHOLD = 7200 #mV
 
 _robot = None
-def get_robot():
+def get_robot(dummy = False):
     """ Use this function to retrieve the (singleton) low-level
     robot accessor.
     """
     global _robot
     if not _robot:
-        _robot = _RangerLowLevel()
+        _robot = _RangerLowLevel(dummy)
     return _robot
 
 
@@ -81,6 +81,8 @@ class _RangerLowLevel():
 
     def __init__(self, dummy = False):
 
+        self.dummy = dummy
+
         self.state = {}
         self.filteredvalues = {} # holds the filters for sensors that need filtering (like scale, IR sensors...)
         self.beacons = {}
@@ -89,6 +91,8 @@ class _RangerLowLevel():
         # creates accessors for each of the fields in STATE
         self._init_accessors()
 
+        if introspection:
+            introspection.initiate(threading.current_thread().ident)
 
         #######################################################################
         #                       ASEBA initialization
@@ -132,7 +136,8 @@ class _RangerLowLevel():
         self._send_evt("enableEncoders", enable = 1)
 
         # Wait until we hear about the 2 main nodes ('main' and 'neuil')
-        self.get_full_state()
+        if not dummy:
+            self.get_full_state()
 
         #self.aseba.set("main", "mot1.pid.enable", 1)
         #self.aseba.set("main", "mot2.pid.enable", 1)
@@ -246,9 +251,21 @@ class _RangerLowLevel():
                 - if 'below' is set, until var < below
                 - else if value is set (default to True), until var = value
         """
-        if var not in self.state:
+        if self.dummy:
+            return
+
+        if var not in self.STATE:
             raise Exception("%s is not part of the robot state" % var)
-        
+
+        if var not in self.state:
+            # value not yet read from the robot.
+            logger.info("Waiting for %s to be published by the robot..." % var)
+            self.update.acquire()
+            while not var in self.state:
+                self.update.wait()
+            self.update.release()
+
+
         if above is not None:
             if self.state[var] > above: return
 
