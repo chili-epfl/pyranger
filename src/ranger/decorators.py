@@ -38,6 +38,11 @@ def action(fn):
     # a future.
     def innerfunc(*args, **kwargs):
 
+        immediate = False
+        if hasattr(args[0], "immediate"): # if args[0] has a 'immediate' member, it's probably the lowlevel robot instance
+            immediate = args[0].immediate
+
+
         # we acquire resources *outside the future* (to fail fast)
         # for resources we do not want to wait for.
         if hasattr(fn, "_locked_res"):
@@ -52,24 +57,29 @@ def action(fn):
             introspection.action_submitted(fn.__name__, threading.current_thread().ident)
             current_threads = set([t.ident for t in threading.enumerate()])
 
-        if args and kwargs:
-            future = executor.submit(lockawarefn, *args, **kwargs)
-        elif args:
-            future = executor.submit(lockawarefn, *args)
+        if immediate:
+            res = FakeFuture(lockawarefn(*args, **kwargs))
+            return res
+
         else:
-            future = executor.submit(lockawarefn)
+            if args and kwargs:
+                future = executor.submit(lockawarefn, *args, **kwargs)
+            elif args:
+                future = executor.submit(lockawarefn, *args)
+            else:
+                future = executor.submit(lockawarefn)
 
-        if introspection:
-            # hack to get the ID of the newly created thread. May fail (ie, non unique value)
-            # if two threads are created in parallel
-            new_threads = set([t.ident for t in threading.enumerate()]) - current_threads
-            future_thread = (new_threads.pop() if len(new_threads) == 1 else None)
-            introspection.action_started(fn.__name__, 
-                                         future_thread,
-                                         threading.current_thread().ident)
-            future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, future_thread))
+            if introspection:
+                # hack to get the ID of the newly created thread. May fail (ie, non unique value)
+                # if two threads are created in parallel
+                new_threads = set([t.ident for t in threading.enumerate()]) - current_threads
+                future_thread = (new_threads.pop() if len(new_threads) == 1 else None)
+                introspection.action_started(fn.__name__, 
+                                            future_thread,
+                                            threading.current_thread().ident)
+                future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, future_thread))
 
-        return future
+            return future
 
     innerfunc.__name__ = fn.__name__
     innerfunc.__doc__ = fn.__doc__
@@ -98,4 +108,9 @@ def lock(res, wait = True):
 
     return decorator
 
+class FakeFuture:
 
+    def __init__(self, result):
+        self._result = result
+    def result(self):
+        return self._result

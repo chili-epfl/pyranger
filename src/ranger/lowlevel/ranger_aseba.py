@@ -26,13 +26,16 @@ ID["MYSTATION"] = ID["STATION1"] # TODO multirobot
 BATTERY_LOW_THRESHOLD = 7200 #mV
 
 _robot = None
-def get_robot(dummy = False):
+def get_robot(dummy = False, immediate = False):
     """ Use this function to retrieve the (singleton) low-level
     robot accessor.
+
+    :param immediate: (default: False) in immediate mode, robot's action are not
+    asynchronous. Useful for debugging for instance.
     """
     global _robot
     if not _robot:
-        _robot = _RangerLowLevel(dummy)
+        _robot = _RangerLowLevel(dummy, immediate)
     return _robot
 
 
@@ -81,9 +84,10 @@ class _RangerLowLevel():
         "w":                    False   # rotation velocity
         }
 
-    def __init__(self, dummy = False):
+    def __init__(self, dummy = False, immediate = False):
 
         self.dummy = dummy
+        self.immediate = immediate
 
         self.state = {}
         self.filteredvalues = {} # holds the filters for sensors that need filtering (like scale, IR sensors...)
