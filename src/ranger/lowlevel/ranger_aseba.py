@@ -315,14 +315,14 @@ class _RangerLowLevel():
             if not hasattr(self, "trajplot"):
                 self.trajplot = XYPlot(x = (-2,2), y= (-2,2))
             # "encoders" = [msg[12], msg[13], msg[14], msg[15]]
-            self.odom.update(msg[14], msg[12]) # left, right
+            self.odom.update(-msg[14], msg[12]) # left, right
             x,y,th,v,w = self.odom.get()
             self.state["x"] = x
             self.state["y"] = y
             self.state["theta"] = th
             self.state["v"] = v
             self.state["w"] = w
-            #self.trajplot.add(y, x, th)
+            self.trajplot.add(y, x, th)
 
         self.state["charging"] = msg[12 if not with_encoders else 16]
         self.state["motor_current_left"] = msg[13 if not with_encoders else 17]
