@@ -153,7 +153,7 @@ class Odom:
         # dx = (l + r) / 2
         # dr = (r - l) / w
 
-        right = 1.0 * v + w * BASE_WIDTH / 2 
-        left = 1.0 * v - w * BASE_WIDTH / 2
+        left = 1.0 * v + w * BASE_WIDTH / 2 
+        right = 1.0 * v - w * BASE_WIDTH / 2
 
         return (left, right)

@@ -10,7 +10,8 @@ from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.introspection import introspection
-from ranger.helpers.plot import XYPlot
+
+MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
 RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
 
@@ -196,12 +197,15 @@ class _RangerLowLevel():
             >>> robot.speed(l = ..., r = ...)
 
         """
-        MAX_SPEED = .5 #m.s^-1
 
-        if v or w:
+        if v is not None or w is not None:
+            if v is None:
+                v = 0
+            if w is None:
+                w = 0
             # control in (v,w)
             l, r = self.odom.twist_to_motors(v, w)
-        elif r or l:
+        elif r is not None or l is not None:
             if r is None:
                 r = l
             elif l is None:
@@ -220,8 +224,13 @@ class _RangerLowLevel():
                          math.pow(self.y - y, 2))
 
 
-    def angleto(self, x, y):
-        return math.atan2(y - self.y, x - self.x)
+    def angleto(self, x, y, relative = False):
+        if relative:
+            return self.angleto(y + self.state["y"], x + self.state["x"])
+        else:
+            return self.normalize_angle(
+                    - self.state["theta"] + math.atan2(y, x)
+                    )
 
     def normalize_angle(self, angle):
         """ Returns equivalent angle such as  -pi < angle <= pi
@@ -312,17 +321,14 @@ class _RangerLowLevel():
         self.state["touch_right"] = decompress_touch(msg[9])
 
         if with_encoders:
-            if not hasattr(self, "trajplot"):
-                self.trajplot = XYPlot(x = (-2,2), y= (-2,2))
             # "encoders" = [msg[12], msg[13], msg[14], msg[15]]
             self.odom.update(-msg[14], msg[12]) # left, right
             x,y,th,v,w = self.odom.get()
             self.state["x"] = x
             self.state["y"] = y
-            self.state["theta"] = th
+            self.state["theta"] = self.normalize_angle(th)
             self.state["v"] = v
             self.state["w"] = w
-            self.trajplot.add(y, x, th)
 
         self.state["charging"] = msg[12 if not with_encoders else 16]
         self.state["motor_current_left"] = msg[13 if not with_encoders else 17]

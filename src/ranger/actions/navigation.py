@@ -35,7 +35,7 @@ def face_beacon(robot, beacon_id):
 
 
 @action
-def face(robot, x, y, speed = 0.01, back = False):
+def face(robot, x, y, w = 0.5, back = False):
     """ Rotates the robot to face a given target point, in /odom frame.
 
     :param speed: rotation speed, in rad.s^-1
@@ -45,15 +45,15 @@ def face(robot, x, y, speed = 0.01, back = False):
     if back:
         angle = robot.normalize_angle(angle + math.pi)
 
-    robot.turn(angle).result()
+    robot.turn(angle, w).result()
 
 @action
-def back(robot, x, y, speed = 0.01):
-    robot.face(x,y, speed, back = True).result()
+def back(robot, x, y, w = 0.5):
+    robot.face(x,y, w, back = True).result()
 
 @action
 @lock(WHEELS)
-def move(robot, distance, v = 0.5):
+def move(robot, distance, v = 0.1):
     """ Move forward (or backward if distance is negative) of a given distance.
 
     For now, open-loop.
@@ -68,13 +68,13 @@ def move(robot, distance, v = 0.5):
 
 @action
 @lock(WHEELS)
-def turn(robot, angle, w = 0.01):
+def turn(robot, angle, w = 0.5):
     """ Turns of a given angle.
 
     For now, open-loop.
 
     :param angle: angle to turn, in radians
-    :param w: (default: 0.01) rotation velocity
+    :param w: (default: 0.2) rotation velocity
     """
 
     duration = abs(angle / w)
@@ -84,7 +84,7 @@ def turn(robot, angle, w = 0.01):
 
 @action
 @lock(WHEELS)
-def goto(robot, x, y, v = 0.5, w = 0.01, epsilon = 0.1, backwards = False):
+def goto(robot, x, y, v = 0.1, w = 0.5, epsilon = 0.1, backwards = False):
     """
 
     :param x, y: target destination, in meters in /odom frame
@@ -128,6 +128,8 @@ def goto(robot, x, y, v = 0.5, w = 0.01, epsilon = 0.1, backwards = False):
             robot.speed(v = v if not backwards else -v)
 
         time.sleep(0.1)
+
+    robot.speed(0)
 
 @action
 def resolve_collision(robot):
