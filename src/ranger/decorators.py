@@ -49,7 +49,7 @@ def action(fn):
                         raise ResourceLockedError("Required resource <%s> locked while running %s" % ([name for name in globals() if globals()[name] is res][0], fn.__name__))
 
         if introspection:
-            introspection.action_starting(fn.__name__, threading.current_thread().ident)
+            introspection.action_submitted(fn.__name__, threading.current_thread().ident)
             current_threads = set([t.ident for t in threading.enumerate()])
 
         if args and kwargs:
@@ -63,8 +63,11 @@ def action(fn):
             # hack to get the ID of the newly created thread. May fail (ie, non unique value)
             # if two threads are created in parallel
             new_threads = set([t.ident for t in threading.enumerate()]) - current_threads
-            introspection.action_started(fn.__name__, new_threads.pop() if len(new_threads) == 1 else None)
-            future.add_done_callback(lambda x : introspection.action_finished(fn.__name__, threading.current_thread().ident))
+            future_thread = (new_threads.pop() if len(new_threads) == 1 else None)
+            introspection.action_started(fn.__name__, 
+                                         future_thread,
+                                         threading.current_thread().ident)
+            future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, future_thread))
 
         return future
 
