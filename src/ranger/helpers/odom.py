@@ -48,10 +48,10 @@ diff_controller.py - controller for a differential drive
 import time
 from math import sin, cos
 
-TICKS_METER = 69049 # The number of wheel encoder ticks per meter of travel
+TICKS_METER = 130000 # The number of wheel encoder ticks per meter of travel
 #TICKS_TO_PID = 0.005124 # motor speed to send to go to 1 tick/sec
 
-BASE_WIDTH = 0.245
+BASE_WIDTH = 0.3
 
 ENCODER_MIN = -32768
 ENCODER_MAX = 32768
@@ -100,6 +100,8 @@ class Odom:
 
         self.right = 1.0 * (r_enc + self.rmult * (ENCODER_MAX - ENCODER_MIN)) 
         self.prev_rencoder = r_enc
+
+        #print("L: %s    R: %s" % (self.left, self.right))
 
     def get(self):
         """ Returns (x, y, theta, v, w) for the robot (in meters, seconds and radians).
