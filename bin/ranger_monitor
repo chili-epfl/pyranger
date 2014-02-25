@@ -135,6 +135,8 @@ class Monitor:
 
     def controller(self, key):
 
+        MAX_SPEED = 0.5
+
         robot = self.robot
 
 
@@ -166,23 +168,23 @@ class Monitor:
 
 
         elif key == self.out.ARROW_UP:
-            self.speed[0] += 5
-            self.speed[1] += 5
+            self.speed[0] += MAX_SPEED / 10
+            self.speed[1] += MAX_SPEED / 10
             robot.speed(*self.speed)
 
         elif key == self.out.ARROW_DOWN:
-            self.speed[0] -= 5
-            self.speed[1] -= 5
+            self.speed[0] -= MAX_SPEED / 10
+            self.speed[1] -= MAX_SPEED / 10
             robot.speed(*self.speed)
 
         elif key == self.out.ARROW_LEFT:
-            self.speed[0] += 5
-            self.speed[1] -= 5
+            self.speed[0] += MAX_SPEED / 10
+            self.speed[1] -= MAX_SPEED / 10
             robot.speed(*self.speed)
 
         elif key == self.out.ARROW_RIGHT:
-            self.speed[0] -= 5
-            self.speed[1] += 5
+            self.speed[0] -= MAX_SPEED / 10
+            self.speed[1] += MAX_SPEED / 10
             robot.speed(*self.speed)
 
         elif key == " ":
@@ -205,7 +207,7 @@ class Monitor:
                     key = self.out.get_keypress()
                     self.controller(key)
 
-                    self.out.moveto(0,0)
+                    self.out.moveto(0, 0)
                     self.showstatus()
                 time.sleep(0.02)
         except KeyboardInterrupt:
