@@ -10,6 +10,7 @@ import time
 import math
 
 from ranger.lowlevel.ranger_aseba import get_robot, BATTERY_LOW_THRESHOLD, ID
+from ranger.helpers.plot import XYPlot
 
 from consoletk import ConsoleTK
 
@@ -33,9 +34,10 @@ neuil_msg = [0.12, 1.03, 0.03,
 
 class Monitor:
 
-    def __init__(self, silent = False):
+    def __init__(self, silent = False, showtraj = False):
         self.robot = get_robot()
 
+        self.showtraj = showtraj
         # used for debugging purposes (-> if set to true, no ANSI sequence -> no mess with debug msgs)
         self.silent = silent
 
@@ -44,6 +46,9 @@ class Monitor:
 
         self.eyes = [0, 0, 0, 0]
         self.speed = [0, 0]
+
+        self._freqs = []
+        self.freq = 0
 
     def __enter__(self):
 
@@ -134,7 +139,7 @@ class Monitor:
         ###################################################
 
         self.out.moveto(0,11)
-        self.out.label("Freq. main: %4.1fHz | Freq. neuil: %4.1fHz | Freq. R&B: %4.1fHz" % (robot.freq_main, robot.freq_neuil, robot.freq_rab))
+        self.out.label("Freq. main: %4.1fHz | Freq. neuil: %4.1fHz | Freq. R&B: %4.1fHz | Monitor: %4.1fHz" % (robot.freq_main, robot.freq_neuil, robot.freq_rab, self.freq))
 
 
     def controller(self, key):
@@ -192,10 +197,15 @@ class Monitor:
             robot.speed(*self.speed)
 
         elif key == " ":
-            self.speed = [0,0]
-            robot.speed(0,0)
+            self.speed = [0, 0]
+            robot.speed(0, 0)
 
 
+    def _freq(self, hz):
+        self._freqs.append(hz)
+        if len(self._freqs) == 10:
+            self.freq = sum(self._freqs) / 10
+            self._freqs = []
 
     def run(self):
 
@@ -204,24 +214,37 @@ class Monitor:
 
         key = ""
 
+        last_time = time.time()
+        
+        if self.showtraj:
+            trajplot = XYPlot(x = (-2,2), y= (-2,2))
+
         try:
             while self.running and key != "q":
-
                 if not self.silent:
                     key = self.out.get_keypress()
                     self.controller(key)
 
                     self.out.moveto(0, 0)
                     self.showstatus()
-                time.sleep(0.02)
+
+                if self.showtraj:
+                    trajplot.add(self.robot.y, self.robot.x, self.robot.theta)
+
+
+                now = time.time()
+                self._freq(1. / (now - last_time))
+                last_time = now
+
+                time.sleep(max(0., 0.02 - (now - last_time)))
+
         except KeyboardInterrupt:
             pass
         finally:
-            self.robot.speed(0,0)
-
+            self.robot.speed(0)
 
 if __name__ == '__main__':
 
-    with Monitor(silent = False) as monitor:
+    with Monitor(silent = False, showtraj = True) as monitor:
             monitor.run()
 
