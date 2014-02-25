@@ -9,6 +9,11 @@ EPSILON_RAD = 0.05
 
 @action
 @lock(WHEELS)
+def stop(robot):
+    robot.speed(0)
+
+@action
+@lock(WHEELS)
 def dock_charging(robot):
     pass
 
