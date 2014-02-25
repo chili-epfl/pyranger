@@ -28,15 +28,26 @@ class XYPlot:
         plt.ylim(y)
         plt.xlim(x)
 
+        self.last_x = 0
+        self.last_y = 0
+        self.last_th = 0
+
     def add(self, x, y, theta = 0):
-        self.x.append(x)
-        self.y.append(y)
-        self.line.set_data(self.x, self.y)
+
+        if abs(x - self.last_x) > 0.02 or abs(y-self.last_y) > 0.02: #move by more than 2 cm?
+            self.x.append(x)
+            self.y.append(y)
+            self.line.set_data(self.x, self.y)
+            self.last_x = x
+            self.last_y = y
 
 
-        plt.arrow( x, y, sin(theta) * 0.2, cos(theta) * 0.2, fc="k", ec="k", head_width=0.1, head_length=0.2 )
+        if abs(theta - self.last_th) > 0.02: #turn by more than 0.02 rad?
+            if self.ax.artists:
+                self.ax.artists[0].remove() # remove previous arrow
+            plt.arrow( x, y, sin(theta) * 0.2, cos(theta) * 0.2, fc="k", ec="k", head_width=0.1, head_length=0.2 )
+
         plt.draw()
-        self.ax.artists[0].remove() # remove previous arrow
 
 
 if __name__ == "__main__":
