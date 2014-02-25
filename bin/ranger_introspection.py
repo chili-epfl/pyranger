@@ -1,19 +1,60 @@
 import Pyro4
+import time
+
+class ActionState:
+    RUNNING = 1
+    COMPLETED = 2
+
+    def __init__(self, name, owner, parent, state = ActionState.RUNNING):
+        self.name = name
+        self.owner = owner
+        self.state = state
+        self.started_time = time.time()
+        self.completed_time = None
+
+        self.parent = parent
+        self.children = []
+
+    def completed(self):
+        self.state = self.COMPLETED
+        self.completed_time = time.time()
+
+    def duration(self):
+        if self.state == self.RUNNING:
+            return time.time() - self.started_time
+        else:
+            return self.completed_time - self.started_time
 
 class IntrospectionServer(object):
+
+    def __init__(self):
+        self.state = {}
 
     def initiate(self, owner):
         print("\n\n\npyRanger started (main thread: %s)" % owner)
 
-    def action_starting(self, name, owner):
-        print("Action %s is being started by thread %s" % (name, owner))
+        self.state[owner] = ActionState("main", owner, ActionState.RUNNING)
 
-    def action_started(self, name, owner):
+    def action_submitted(self, name, owner):
+        print("Action %s is being submitted by thread %s" % (name, owner))
+
+    def action_started(self, name, owner, parent):
         print("Action %s has started in thread %s" % (name, owner))
+        action = ActionState(name, owner, parent)
 
+        self.state[owner] = action
+        self.state[parent].children.append(action)
 
-    def action_finished(self, name, owner):
+    def action_completed(self, name, owner):
         print("Action %s, started in thread %s, is finished" % (name, owner))
+
+        self.state[owner].completed()
+
+class IntrospectionPrinter(object):
+
+    def __init__(self, server):
+        self.server = server
+
 
 
 
