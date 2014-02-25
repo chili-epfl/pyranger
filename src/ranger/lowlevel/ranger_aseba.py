@@ -10,6 +10,7 @@ from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.introspection import introspection
+from ranger.helpers.plot import XYPlot
 
 RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
 
@@ -113,7 +114,7 @@ class _RangerLowLevel():
         self.aseba.load_scripts(RANGER_ASEBA_SCRIPT)
 
         # Register callbacks for the main events of the 3 nodes
-        self.aseba.on_event("mainFeedback", self._process_main_feedback)
+        self.aseba.on_event("mainFeedbackWithEncoders", self._process_main_feedback)
         self.aseba.on_event("neuilFeedback", self._process_neuil_feedback)
         self.aseba.on_event("receiverFeedback", self._process_rab_feedback)
         self.state["freq_main"] = 0.0
@@ -311,20 +312,23 @@ class _RangerLowLevel():
         self.state["touch_right"] = decompress_touch(msg[9])
 
         if with_encoders:
+            if not hasattr(self, "trajplot"):
+                self.trajplot = XYPlot(x = (-2,2), y= (-2,2))
             # "encoders" = [msg[12], msg[13], msg[14], msg[15]]
-            self.odom.update(msg[12], msg[14])
+            self.odom.update(msg[14], msg[12]) # left, right
             x,y,th,v,w = self.odom.get()
             self.state["x"] = x
             self.state["y"] = y
             self.state["theta"] = th
             self.state["v"] = v
             self.state["w"] = w
+            #self.trajplot.add(y, x, th)
 
         self.state["charging"] = msg[12 if not with_encoders else 16]
         self.state["motor_current_left"] = msg[13 if not with_encoders else 17]
         self.state["motor_current_right"] = msg[14 if not with_encoders else 18]
 
-        self.state["freq_main"] = self.aseba.events_freq["mainFeedback"]
+        self.state["freq_main"] = self.aseba.events_freq["mainFeedbackWithEncoders"]
 
         self.update.acquire()
         self.main_update.acquire()
