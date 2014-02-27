@@ -3,8 +3,8 @@ introspection = None
 
 try:
     import Pyro4
-    import Pyro4.erros
-    uri = "PYRO:obj_ea811f4dcede4891a6b94415313b6cd2@localhost:45590"
+    import Pyro4.errors
+    uri = "PYRONAME:ranger.introspection" # uses name server
     try:
         introspection = Pyro4.Proxy(uri)
     except Pyro4.errors.CommunicationError:

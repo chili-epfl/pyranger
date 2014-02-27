@@ -1,0 +1,135 @@
+#! /usr/bin/env python
+
+import Pyro4
+import time
+
+from threading import Thread
+from consoletk import ConsoleTK
+
+class ActionState:
+    RUNNING = 1
+    COMPLETED = 2
+
+    def __init__(self, name, owner, parent, args, kwargs, state = RUNNING):
+        self.name = name
+        self.args = args
+        self.kwargs = kwargs
+        self.arg_str = "()"
+
+        if args and not kwargs:
+            self.arg_str = "(%s)" % ", ".join([str(a) for a in args])
+        elif kwargs and not args:
+            self.arg_str = "(%s)" % ", ".join(["%s=%s" % (str(k), str(v)) for k, v in kwargs.items()])
+        elif args and kwargs:
+            self.arg_str = "(%s, " % ", ".join([str(a) for a in args])
+            self.arg_str += "%s)" % ", ".join(["%s=%s" % (str(k), str(v)) for k, v in kwargs.items()])
+
+
+        self.owner = owner
+        self.state = state
+        self.started_time = time.time()
+        self.completed_time = None
+
+        self.parent = parent
+        self.children = []
+        self.running_children = []
+
+    def completed(self):
+        self.state = self.COMPLETED
+        self.completed_time = time.time()
+
+    def duration(self):
+        if self.state == self.RUNNING:
+            return time.time() - self.started_time
+        else:
+            return self.completed_time - self.started_time
+
+class IntrospectionServer(object):
+
+    def __init__(self):
+        self.state = {}
+        
+        self.root = None
+
+        self.initdisplay()
+        self.running = True
+        self.display_thr = Thread(target = self.printer)
+        self.display_thr.start()
+
+    def initdisplay(self):
+
+        self.out = ConsoleTK(height = 20)
+
+    def close(self):
+        self.running = False
+        self.display_thr.join()
+        self.out.moveto(0, 0)
+
+    def initiate(self, owner):
+        self.root = ActionState("main", owner, ActionState.RUNNING, None, None)
+        self.state[owner] = self.root
+
+    def action_submitted(self, name, owner):
+        pass
+
+    def action_started(self, name, owner, parent, args, kwargs):
+        action = ActionState(name, owner, parent, args, kwargs)
+
+        self.state[owner] = action
+        self.state[parent].children.append(action)
+        self.state[parent].running_children.append(action)
+
+    def action_completed(self, name, owner):
+
+        action = self.state[owner]
+        self.state[action.parent].running_children.remove(action)
+        action.completed()
+
+    def printer(self):
+
+        def show(action, level, row):
+            self.out.moveto(level * 2, row)
+            fg = "green" if action.state == ActionState.RUNNING else "base0"
+            duration = " [%.1fs]" % ((action.completed_time if action.completed_time else time.time()) - action.started_time)
+
+            self.out.savepos()
+            self.out.out.write(self.out.colorize(action.name, fg))
+            self.out.out.write(self.out.colorize(action.arg_str + " "))
+            self.out.out.write(self.out.colorize(duration))
+            self.out.restorepos()
+
+            row += 1
+
+            if action.state != ActionState.COMPLETED:
+                for c in action.children:
+                    row = show(c, level + 1, row)
+
+            return row
+
+
+        while self.running:
+            time.sleep(0.05)
+
+            if not self.root:
+                continue
+
+            self.out.moveto(0, 0)
+            self.out.clear(80, 20)
+            row = 0
+            level = 0
+
+            show(self.root, level, row)
+
+
+
+introspection = IntrospectionServer()
+
+daemon=Pyro4.Daemon()                 # make a Pyro daemon
+ns=Pyro4.locateNS()
+uri=daemon.register(introspection)   # register the greeting object as a Pyro object
+ns.register("ranger.introspection", uri)
+
+print("Introspection server for pyranger ready.")
+daemon.requestLoop()                  # start the event loop of the server to wait for calls
+
+introspection.close()

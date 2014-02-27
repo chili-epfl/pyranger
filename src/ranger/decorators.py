@@ -76,7 +76,9 @@ def action(fn):
                 future_thread = (new_threads.pop() if len(new_threads) == 1 else None)
                 introspection.action_started(fn.__name__, 
                                             future_thread,
-                                            threading.current_thread().ident)
+                                            threading.current_thread().ident,
+                                            args[1:],
+                                            kwargs)
                 future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, future_thread))
 
             return future
