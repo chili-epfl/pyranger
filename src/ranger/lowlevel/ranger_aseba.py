@@ -226,8 +226,10 @@ class _RangerLowLevel():
         if relative:
             return self.angleto(y + self.state["y"], x + self.state["x"])
         else:
+            if x == self.state["x"]:
+                return 0. # undefined, really
             return self.normalize_angle(
-                    - self.state["theta"] + math.atan2(y, x)
+                    - self.state["theta"] + math.atan2(y - self.state["y"], x - self.state["x"])
                     )
 
     def normalize_angle(self, angle):
