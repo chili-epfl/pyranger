@@ -217,7 +217,7 @@ class Monitor:
         last_time = time.time()
         
         if self.showtraj:
-            trajplot = XYPlot(x = (-2,2), y= (-2,2))
+            trajplot = XYPlot(x = (-2, 2), y= (-2, 2))
 
         try:
             while self.running and key != "q":

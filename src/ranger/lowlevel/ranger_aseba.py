@@ -122,9 +122,6 @@ class _RangerLowLevel():
         self.aseba.on_event("mainFeedbackWithEncoders", self._process_main_feedback)
         self.aseba.on_event("neuilFeedback", self._process_neuil_feedback)
         self.aseba.on_event("receiverFeedback", self._process_rab_feedback)
-        self.state["freq_main"] = 0.0
-        self.state["freq_neuil"] = 0.0
-        self.state["freq_rab"] = 0.0
 
         # Condition variable that can be used to wait
         # until the next update of a given Aseba node
@@ -138,15 +135,12 @@ class _RangerLowLevel():
         self.aseba_thread.start()
 
         # Asks the nodes to send their events
-        self._send_evt("enableFeedback", enable = 1)
         self._send_evt("enableEncoders", enable = 1)
+        self._send_evt("enableFeedback", enable = 1)
 
         # Wait until we hear about the 2 main nodes ('main' and 'neuil')
         if not dummy:
             self.get_full_state()
-
-        #self.aseba.set("main", "mot1.pid.enable", 1)
-        #self.aseba.set("main", "mot2.pid.enable", 1)
 
         #######################################################################
         #                   End of ASEBA initialization
