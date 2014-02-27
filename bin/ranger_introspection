@@ -32,7 +32,6 @@ class ActionState:
 
         self.parent = parent
         self.children = []
-        self.running_children = []
 
     def completed(self):
         self.state = self.COMPLETED
@@ -77,12 +76,10 @@ class IntrospectionServer(object):
 
         self.state[owner] = action
         self.state[parent].children.append(action)
-        self.state[parent].running_children.append(action)
 
     def action_completed(self, name, owner):
 
         action = self.state[owner]
-        self.state[action.parent].running_children.remove(action)
         action.completed()
 
     def printer(self):
