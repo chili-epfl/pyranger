@@ -1,0 +1,82 @@
+#! /usr/bin/env python
+
+import time
+
+import logging; logger = logging.getLogger("ranger")
+logger.setLevel(logging.INFO)
+
+console = logging.StreamHandler()
+console.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
+console.setFormatter(formatter)
+
+logger.addHandler(console)
+
+from ranger.lowlevel.ranger_aseba import ID
+from ranger import get_robot
+from ranger.actions.look import *
+
+results = {}
+
+def test(msg, action, *args, **kwargs):
+    print("\n" + msg)
+
+    if args and kwargs:
+        action(*args, **kwargs)
+    elif args:
+        action(*args)
+    elif kwargs:
+        action(**kwargs)
+    else:
+        action()
+
+    res = raw_input("Press enter if ok, space in case of failure, q to interrupt")
+    if res == "":
+        results[action.__name__ + str(args)] = True
+    else:
+        results[action.__name__ + str(args)] = False
+
+    if res == "q":
+        raise Exception()
+
+def checkvalue(msg, robot, sensor, value, delta = None, waitkeypress = True):
+
+    if waitkeypress:
+        print("\n" + msg)
+        raw_input("Press enter to continue...")
+    
+    raw = getattr(robot, sensor)
+
+    if (delta and abs(raw - value) < delta) or raw == value:
+        results[sensor] = True
+    else:
+        results[sensor] = False
+
+if __name__ == "__main__":
+    logger.info("Ranger checkup")
+
+    try:
+        with get_robot(dummy = False) as robot:
+            time.sleep(0.3) # let some time for the robot to settle
+            test("Eyes + lids centered", robot.eyes, 0, 0, l_upper_lid = 50)
+            test("Eyes on left side", robot.eyes, -100, 0)
+            test("Eyes on right side", robot.eyes, 100, 0)
+            test("Eyes on top", robot.eyes, 0, -100)
+            test("Eyes on bottom", robot.eyes, 0, 100)
+            test("Eyelids wide open", robot.eyes, 0, 0, l_upper_lid = 100)
+            test("Eyelids closed", robot.eyes, 0, 0, l_upper_lid = 0)
+
+            checkvalue("Put the lolette", robot, "lolette", True)
+            checkvalue("Remove the lolette", robot, "lolette", False)
+            checkvalue("Hide front IR sensors", robot, "ir_center", 0, delta = 0.05)
+            checkvalue("", robot, "ir_left", 0, delta = 0.05, waitkeypress = False)
+            checkvalue("", robot, "ir_right", 0, delta = 0.05, waitkeypress = False)
+
+    except Exception as e:
+        logger.info("Interrupted.")
+        raise e
+
+
+    print("\n\n")
+    for k,v in results.items():
+        print(k + "\t\t\t-> " + str(v))
