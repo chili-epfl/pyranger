@@ -1,4 +1,5 @@
 import logging; logger = logging.getLogger("ranger." + __name__)
+import threading
 introspection = None
 
 try:
@@ -7,7 +8,9 @@ try:
     uri = "PYRONAME:ranger.introspection" # uses name server
     try:
         introspection = Pyro4.Proxy(uri)
+        introspection.initiate(threading.current_thread().ident)
     except Pyro4.errors.CommunicationError:
         logger.warning("Introspection server not running. No introspection.")
+        introspection = None
 except ImportError:
     pass

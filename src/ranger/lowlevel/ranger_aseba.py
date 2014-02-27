@@ -97,9 +97,6 @@ class _RangerLowLevel():
         # creates accessors for each of the fields in STATE
         self._init_accessors()
 
-        if introspection:
-            introspection.initiate(threading.current_thread().ident)
-
         #######################################################################
         #                       ASEBA initialization
         #######################################################################
