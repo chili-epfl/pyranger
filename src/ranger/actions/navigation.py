@@ -108,7 +108,7 @@ def goto(robot, x, y, v = 0.1, w = 0.5, epsilon = 0.1, backwards = False):
         dist = robot.distanceto(x, y)
         if dist < epsilon:
             logger.info("Reached target")
-            return
+            break
         if dist > prev_dist: # we are not getting closer anymore!
 
             robot.speed(0)
@@ -127,6 +127,7 @@ def goto(robot, x, y, v = 0.1, w = 0.5, epsilon = 0.1, backwards = False):
             WHEELS.acquire()
             robot.speed(v = v if not backwards else -v)
 
+        prev_dist = dist
         time.sleep(0.1)
 
     robot.speed(0)
