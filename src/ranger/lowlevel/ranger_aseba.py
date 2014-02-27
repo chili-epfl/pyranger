@@ -55,33 +55,33 @@ def _element_clip(list_i, min_val, max_val):
 class _RangerLowLevel():
 
     STATE = {
-        # name of the field,    writable?
-        "accelerometer":        False,  # 3-axis accelerometer, in m.s^-2
-        "sharp1":               False,  # IR sensor, bottom left, in m
-        "sharp2":               False,  # IR sensor, bottom right, in m
-        "battery":              False,  # battery level, in mV
-        "bumper":               False,  # is front bumper active? (bool)
-        "velocity_left":        False,   # left motor velocity, in rad.s^-1
-        "velocity_right":       False,   # right motor velocity, in rad.s^-1
-        "touch_left":           False,  # 3x3 bool matrix, touch sensors left
-        "touch_rear":           False,  # 3x3 bool matrix, touch sensors rear
-        "touch_right":          False,  # 3x3 bool matrix, touchsensors right
-        "charging":             False,  # battery currently charging? (bool)
-        "motor_current_left":   False,  # current in left motor, in mA
-        "motor_current_right":  False,  # current in right motor, in mA
-        "ir_left":              False,  # IR sensor, front-left, in m
-        "ir_center":            False,  # IR sensor, front-center, in m
-        "ir_right":             False,  # IR sensor, front-right, in m
-        "lolette":              False,  # is the lolette present? (bool)
-        "scale":                False,  # measured weight, in kg
-        "freq_main":            False,  # update frequency of the main robot node
-        "freq_neuil":           False,  # update frequency of the 'neuil' robot node
-        "freq_rab":             False,  # update frequency of the 'Range and Bearing' robot node
-        "x":                    False,  # x position of the robot, computed from odometry
-        "y":                    False,  # y position of the robot, computed from odometry
-        "theta":                False,  # orientation of the robot, computed from odometry
-        "v":                    False,  # linear velocity, in robot's forward direction
-        "w":                    False   # rotation velocity
+        # name of the field,    default?
+        "accelerometer":        None,  # 3-axis accelerometer, in m.s^-2
+        "sharp1":               None,  # IR sensor, bottom left, in m
+        "sharp2":               None,  # IR sensor, bottom right, in m
+        "battery":              None,  # battery level, in mV
+        "bumper":               None,  # is front bumper active? (bool)
+        "velocity_left":        None,   # left motor velocity, in rad.s^-1
+        "velocity_right":       None,   # right motor velocity, in rad.s^-1
+        "touch_left":           None,  # 3x3 bool matrix, touch sensors left
+        "touch_rear":           None,  # 3x3 bool matrix, touch sensors rear
+        "touch_right":          None,  # 3x3 bool matrix, touchsensors right
+        "charging":             None,  # battery currently charging? (bool)
+        "motor_current_left":   None,  # current in left motor, in mA
+        "motor_current_right":  None,  # current in right motor, in mA
+        "ir_left":              None,  # IR sensor, front-left, in m
+        "ir_center":            None,  # IR sensor, front-center, in m
+        "ir_right":             None,  # IR sensor, front-right, in m
+        "lolette":              None,  # is the lolette present? (bool)
+        "scale":                None,  # measured weight, in kg
+        "freq_main":            0.0,  # update frequency of the main robot node
+        "freq_neuil":           0.0,  # update frequency of the 'neuil' robot node
+        "freq_rab":             0.0,  # update frequency of the 'Range and Bearing' robot node
+        "x":                    0.0,  # x position of the robot, computed from odometry
+        "y":                    0.0,  # y position of the robot, computed from odometry
+        "theta":                0.0,  # orientation of the robot, computed from odometry
+        "v":                    0.0,  # linear velocity, in robot's forward direction
+        "w":                    0.0   # rotation velocity
         }
 
     def __init__(self, dummy = False, immediate = False):
@@ -404,7 +404,7 @@ class _RangerLowLevel():
             logger.debug("Event %s(%s) sent." % (id, str(args)))
         self.aseba.send_event(id, args)
 
-    def _add_property(self, name, writable):
+    def _add_property(self, name, default):
 
         def getter(self):
             if name in self.state:
@@ -412,21 +412,18 @@ class _RangerLowLevel():
             else:
                 return None
 
-        def setter(self, val):
-            self._send_evt(name, value = val)
+        setattr(self.__class__,name, property(getter))
 
-        if writable:
-            setattr(self.__class__, name, property(getter, setter)) 
-        else:
-            setattr(self.__class__,name, property(getter))
+        if default is not None:
+            self.state[name] = default
 
 
     def _init_accessors(self):
 
-        for name, writable in self.STATE.items():
+        for name, default in self.STATE.items():
             # the creation of the setters,getters must take place in a separate
             # function, else they all refer to the same field name... Python internals...
-            self._add_property(name, writable)
+            self._add_property(name, default)
 
     def filtered(self, name, val):
         """ Helper to easily filter values (uses an accumulator to average a given 'name' quantity)
