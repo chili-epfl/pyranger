@@ -1,10 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
 import threading
+import time
 
 from resources import *
 from ranger.introspection import introspection
 
-executor = ThreadPoolExecutor(max_workers = 5)
+executor = ThreadPoolExecutor(max_workers = 40) # at most 40 tasks
 
 def action(fn):
     """
@@ -72,14 +73,30 @@ def action(fn):
             if introspection:
                 # hack to get the ID of the newly created thread. May fail (ie, non unique value)
                 # if two threads are created in parallel
+                new_threads = []
+                max_wait = .5 #sec
                 new_threads = set([t.ident for t in threading.enumerate()]) - current_threads
-                future_thread = (new_threads.pop() if len(new_threads) == 1 else None)
-                introspection.action_started(fn.__name__, 
-                                            future_thread,
-                                            threading.current_thread().ident,
-                                            args[1:],
-                                            kwargs)
-                future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, future_thread))
+                while not new_threads and max_wait > 0:
+                    max_wait -= 0.01
+                    time.sleep(0.01) # wait 10ms to leave some time for the future to start
+                    new_threads = set([t.ident for t in threading.enumerate()]) - current_threads
+
+                if max_wait > 0:
+                    assert(len(new_threads) > 0)
+                    assert(len(new_threads) == 1)
+                    future_thread = new_threads.pop()
+
+                    introspection.action_started(fn.__name__, 
+                                                future_thread,
+                                                threading.current_thread().ident,
+                                                args[1:],
+                                                kwargs)
+                    future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, future_thread))
+                else:
+                    print("Future not running after %s s... exception? max_worker overflow? (currently running %s threads)" % (max_wait, len(executor._threads)))
+                    ex = future.exception()
+                    if ex:
+                        raise ex
 
             return future
 
