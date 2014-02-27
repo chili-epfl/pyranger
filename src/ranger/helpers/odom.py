@@ -79,6 +79,17 @@ class Odom:
         self.dr = 0
         self.then = time.time()
 
+    def reset(self, x = 0., y = 0., theta = 0.):
+        self.enc_left = None        # wheel encoder readings
+        self.enc_right = None
+        self.x = x                  # position in xy plane 
+        self.y = y
+        self.th = theta
+        self.dx = 0                 # speeds in x/rotation
+        self.dr = 0
+        self.then = time.time()
+
+
     def update(self, l_enc, r_enc):
 
         #### Left wheel
@@ -137,7 +148,7 @@ class Odom:
             # calculate the final position of the robot
             self.x = self.x + ( cos( self.th ) * x - sin( self.th ) * y )
             self.y = self.y + ( sin( self.th ) * x + cos( self.th ) * y )
-        if( th != 0):
+        if (th != 0):
             self.th = self.th + th
 
         return (self.x, self.y, self.th, self.dx, self.dr)
