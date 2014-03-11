@@ -25,14 +25,18 @@ def action(fn):
                 if wait:
                     res.acquire(wait)
 
-        result = fn(*args, **kwargs)
+        try:
+            result = fn(*args, **kwargs)
+            return result
+        finally:
+            if hasattr(fn, "_locked_res"):
+                for res, wait in fn._locked_res:
+                    res.release()
 
-        if hasattr(fn, "_locked_res"):
-            for res, wait in fn._locked_res:
-                res.release()
 
 
-        return result
+    lockawarefn.__name__ = fn.__name__
+    lockawarefn.__doc__ = fn.__doc__
 
 
     # wrapper that submits the function to the executor and returns
