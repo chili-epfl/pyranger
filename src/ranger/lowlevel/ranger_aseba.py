@@ -159,6 +159,9 @@ class _RangerLowLevel():
             setattr(self, action.__name__, partial(action, self))
             logger.info("Added " + action.__name__ + " as available action.")
 
+        if introspection:
+            introspection.ping()
+
     def lefteye(self, x, y):
         self.eyes(lx=x, ly=y, rx=0, ry=0)
 
@@ -310,6 +313,9 @@ class _RangerLowLevel():
 
 
     def _process_main_feedback(self, msg, with_encoders = True):
+        if introspection:
+            introspection.ping()
+
         self.state["accelerometer"] = [msg[0], msg[1], msg[2]]
         self.state["sharp1"] = self.filtered("ir_sharp1", linear_interpolation(msg[3], GP2Y0A41SK0F))
 

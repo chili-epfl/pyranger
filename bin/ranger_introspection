@@ -63,6 +63,8 @@ class IntrospectionServer(object):
         self.display_thr = Thread(target = self.printer)
         self.display_thr.start()
 
+        self.last_ping = time.time()
+
     def initdisplay(self):
 
         self.out = ConsoleTK(height = 20)
@@ -80,17 +82,20 @@ class IntrospectionServer(object):
         pass
 
     def action_started(self, name, owner, parent, args, kwargs):
+        self.last_ping = time.time()
         action = ActionState(name, owner, parent, args, kwargs)
 
         self.state[owner] = action
         self.state[parent].children.append(action)
 
     def action_completed(self, name, owner):
+        self.last_ping = time.time()
 
         action = self.state[owner]
         action.completed()
 
     def action_waiting(self, owner, sensor):
+        self.last_ping = time.time()
 
         action = self.state[owner]
         action.waiting_on = sensor
@@ -98,11 +103,15 @@ class IntrospectionServer(object):
         logging.info("%.3f\t%s waiting on <%s>." %(time.time(), owner, sensor))
 
     def action_waiting_over(self, owner):
+        self.last_ping = time.time()
 
         action = self.state[owner]
         action.state = ActionState.RUNNING
         logging.info("%.3f\t%s stopped waiting." %(time.time(), owner))
 
+    def ping(self):
+
+        self.last_ping = time.time()
 
     def printer(self):
 
@@ -143,10 +152,20 @@ class IntrospectionServer(object):
 
             self.out.moveto(0, 0)
             self.out.clear(80, 20)
-            row = 0
-            level = 0
 
-            show(self.root, level, row)
+            time_since_last_ping = (time.time() - self.last_ping) * 1000
+            if time_since_last_ping > 1000:
+                self.out.savepos()
+                self.out.out.write("No ping since %.1fs! Controller dead?" % (time_since_last_ping / 1000))
+                self.out.restorepos()
+            else:
+                self.out.savepos()
+                self.out.out.write("Last ping: %.1fms ago" % ((time.time() - self.last_ping) * 1000))
+                self.out.restorepos()
+                row = 1
+                level = 0
+
+                show(self.root, level, row)
 
 
 
