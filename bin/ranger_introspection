@@ -9,6 +9,7 @@ from consoletk import ConsoleTK
 class ActionState:
     RUNNING = 1
     COMPLETED = 2
+    WAITING = 3
 
     def __init__(self, name, owner, parent, args, kwargs, state = RUNNING):
         self.name = name
@@ -82,22 +83,45 @@ class IntrospectionServer(object):
         action = self.state[owner]
         action.completed()
 
+    def action_waiting(self, owner, sensor):
+
+        action = self.state[owner]
+        action.waiting_on = sensor
+        action.state = ActionState.WAITING
+        logging.info("%.3f\t%s waiting on <%s>." %(time.time(), owner, sensor))
+
+    def action_waiting_over(self, owner):
+
+        action = self.state[owner]
+        action.state = ActionState.RUNNING
+        logging.info("%.3f\t%s stopped waiting." %(time.time(), owner))
+
+
     def printer(self):
 
         def show(action, level, row):
             self.out.moveto(level * 2, row)
             fg = "green" if action.state == ActionState.RUNNING else "base0"
+            
+            if action.state == ActionState.WAITING:
+                fg = "yellow"
+                msg = " waiting on <%s>" % action.waiting_on
+            else:
+                msg = ""
+
             duration = " [%.1fs]" % ((action.completed_time if action.completed_time else time.time()) - action.started_time)
 
             self.out.savepos()
             self.out.out.write(self.out.colorize(action.name, fg))
             self.out.out.write(self.out.colorize(action.arg_str + " "))
+            self.out.out.write(self.out.colorize(msg))
             self.out.out.write(self.out.colorize(duration))
             self.out.restorepos()
 
             row += 1
 
-            if action.state != ActionState.COMPLETED:
+            #if action.state != ActionState.COMPLETED:
+            if True:
                 for c in action.children:
                     row = show(c, level + 1, row)
 

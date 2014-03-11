@@ -264,6 +264,9 @@ class _RangerLowLevel():
         if var not in self.STATE:
             raise Exception("%s is not part of the robot state" % var)
 
+        if introspection:
+            introspection.action_waiting(threading.current_thread().ident, var)
+
         if var not in self.state:
             # value not yet read from the robot.
             logger.info("Waiting for %s to be published by the robot..." % var)
@@ -274,28 +277,32 @@ class _RangerLowLevel():
 
 
         if above is not None:
-            if self.state[var] > above: return
+            if not self.state[var] > above:
 
-            self.update.acquire()
-            while not self.state[var] > above:
-                self.update.wait()
-            self.update.release()
+                self.update.acquire()
+                while not self.state[var] > above:
+                    self.update.wait()
+                self.update.release()
 
         elif below is not None:
-            if self.state[var] < below: return
+            if not self.state[var] < below:
 
-            self.update.acquire()
-            while not self.state[var] < below:
-                self.update.wait()
-            self.update.release()
+                self.update.acquire()
+                while not self.state[var] < below:
+                    self.update.wait()
+                self.update.release()
 
         else:
-            if self.state[var] == value: return
+            if not self.state[var] == value:
 
-            self.update.acquire()
-            while not self.state[var] == value:
-                self.update.wait()
-            self.update.release()
+                self.update.acquire()
+                while not self.state[var] == value:
+                    self.update.wait()
+                self.update.release()
+
+
+        if introspection:
+            introspection.action_waiting_over(threading.current_thread().ident)
 
 
     def _process_main_feedback(self, msg, with_encoders = True):
