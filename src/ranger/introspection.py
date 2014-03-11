@@ -8,7 +8,7 @@ try:
     uri = "PYRONAME:ranger.introspection" # uses name server
     try:
         introspection = Pyro4.Proxy(uri)
-        introspection.initiate(threading.current_thread().ident)
+        introspection.initiate(str(0)) # 0 is the action ID of the main process
     except Pyro4.errors.CommunicationError:
         logger.warning("Introspection server not running. No introspection.")
         introspection = None

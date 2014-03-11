@@ -1,11 +1,11 @@
-from concurrent.futures import ThreadPoolExecutor
-import threading
+from lowlevel.future import RobotActionExecutor
+from threading import local # to access the action id.
 import time
 
 from resources import *
 from ranger.introspection import introspection
 
-executor = ThreadPoolExecutor(max_workers = 40) # at most 40 tasks
+executor = RobotActionExecutor(max_workers = 10) # at most 10 tasks in parallel
 
 def action(fn):
     """
@@ -42,6 +42,9 @@ def action(fn):
         immediate = False
         if hasattr(args[0], "immediate"): # if args[0] has a 'immediate' member, it's probably the lowlevel robot instance
             immediate = args[0].immediate
+            my_action_id = args[0].action_id.id
+        else:
+            raise Exception("No robot instance passed to the action!")
 
 
         # we acquire resources *outside the future* (to fail fast)
@@ -53,10 +56,6 @@ def action(fn):
 
                     if not got_the_lock:
                         raise ResourceLockedError("Required resource <%s> locked while running %s" % ([name for name in globals() if globals()[name] is res][0], fn.__name__))
-
-        if introspection:
-            introspection.action_submitted(fn.__name__, threading.current_thread().ident)
-            current_threads = set([t.ident for t in threading.enumerate()])
 
         if immediate:
             res = FakeFuture(lockawarefn(*args, **kwargs))
@@ -71,32 +70,13 @@ def action(fn):
                 future = executor.submit(lockawarefn)
 
             if introspection:
-                # hack to get the ID of the newly created thread. May fail (ie, non unique value)
-                # if two threads are created in parallel
-                new_threads = []
-                max_wait = .5 #sec
-                new_threads = set([t.ident for t in threading.enumerate()]) - current_threads
-                while not new_threads and max_wait > 0:
-                    max_wait -= 0.01
-                    time.sleep(0.01) # wait 10ms to leave some time for the future to start
-                    new_threads = set([t.ident for t in threading.enumerate()]) - current_threads
 
-                if max_wait > 0:
-                    assert(len(new_threads) > 0)
-                    assert(len(new_threads) == 1)
-                    future_thread = new_threads.pop()
-
-                    introspection.action_started(fn.__name__, 
-                                                future_thread,
-                                                threading.current_thread().ident,
-                                                args[1:],
-                                                kwargs)
-                    future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, future_thread))
-                else:
-                    print("Future not running after %s s... exception? max_worker overflow? (currently running %s threads)" % (max_wait, len(executor._threads)))
-                    ex = future.exception()
-                    if ex:
-                        raise ex
+                introspection.action_started(fn.__name__, 
+                                            str(future.id),
+                                            str(my_action_id), #id of the current action
+                                            args[1:],
+                                            kwargs)
+                future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, str(future.id)))
 
             return future
 

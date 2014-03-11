@@ -97,6 +97,9 @@ class _RangerLowLevel():
         # creates accessors for each of the fields in STATE
         self._init_accessors()
 
+        self.action_id = threading.local() # current action ID
+        self.action_id.id = 0 # initially 0 (the main task)
+
         #######################################################################
         #                       ASEBA initialization
         #######################################################################
