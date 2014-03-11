@@ -162,10 +162,10 @@ class IntrospectionServer(object):
                 self.out.savepos()
                 self.out.out.write("Last ping: %.1fms ago" % ((time.time() - self.last_ping) * 1000))
                 self.out.restorepos()
-                row = 1
-                level = 0
+            row = 1
+            level = 0
 
-                show(self.root, level, row)
+            show(self.root, level, row)
 
 
 
