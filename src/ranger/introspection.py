@@ -12,5 +12,9 @@ try:
     except Pyro4.errors.CommunicationError:
         logger.warning("Introspection server not running. No introspection.")
         introspection = None
+    except Pyro4.errors.NamingError:
+        logger.warning("Introspection server not running (no name server). No introspection.")
+        introspection = None
+ 
 except ImportError:
     pass
