@@ -1,7 +1,11 @@
 #! /usr/bin/env python
 
+import logging
+logging.basicConfig(filename='example.log',level=logging.DEBUG)
+
 import Pyro4
 import time
+import sys
 
 from threading import Thread
 from consoletk import ConsoleTK
@@ -34,9 +38,12 @@ class ActionState:
         self.parent = parent
         self.children = []
 
+        logging.info("%.3f\t%s\t%s%s started." %(self.started_time, self.owner, self.name, self.arg_str))
+
     def completed(self):
         self.state = self.COMPLETED
         self.completed_time = time.time()
+        logging.info("%.3f\t%s\t%s%s completed." %(self.completed_time, self.owner, self.name, self.arg_str))
 
     def duration(self):
         if self.state == self.RUNNING:

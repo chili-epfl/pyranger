@@ -250,13 +250,14 @@ class _RangerLowLevel():
             wait_duration += 0.1
 
             if wait_duration > MAX_WAIT:
-                raise Exception("The robot does not transmit its state!!")
+                raise Exception("The robot does not transmit its state!! Check the connection to the aseba network.")
 
     def wait(self, var, value = True, above = None, below = None):
         """ waits until the state value 'var' fulfill some condition:
                 - if 'above' is set, until var > above
                 - if 'below' is set, until var < below
                 - else if value is set (default to True), until var = value
+
         """
         if self.dummy:
             return
