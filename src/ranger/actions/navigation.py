@@ -1,9 +1,10 @@
-import logging; logger = logging.getLogger("ranger." + __name__)
+import logging; logger = logging.getLogger("ranger.navigation")
 
 import time, math
 from random import uniform as rand
 from ranger.decorators import action, lock
 from ranger.resources import *
+from ranger.exceptions import ActionCancelled
 
 EPSILON_RAD = 0.05
 
@@ -94,43 +95,47 @@ def goto(robot, x, y, v = 0.1, w = 0.5, epsilon = 0.1, backwards = False):
     :param backwards: if true, move backwards
     """
 
-    WHEELS.release()
-    action = robot.face(x, y, w, back = backwards)
-    #waits until the robot faces the destination
-    action.result()
-    WHEELS.acquire()
+    try:
+        WHEELS.release()
+        action = robot.face(x, y, w, back = backwards)
+        #waits until the robot faces the destination
+        action.result()
+        WHEELS.acquire()
 
-    robot.speed(v = v if not backwards else -v)
+        robot.speed(v = v if not backwards else -v)
 
-    prev_dist = robot.distanceto(x, y)
-    
-    while True:
-        dist = robot.distanceto(x, y)
-        if dist < epsilon:
-            logger.info("Reached target")
-            break
-        if dist > prev_dist: # we are not getting closer anymore!
+        prev_dist = robot.distanceto(x, y)
 
-            robot.speed(0)
-            WHEELS.release()
-            robot.face(x, y, w, back = backwards).result()
-            WHEELS.acquire()
-            robot.speed(v = v if not backwards else -v)
+        while True:
+            dist = robot.distanceto(x, y)
+            if dist < epsilon:
+                logger.info("Reached target")
+                break
+            if dist > prev_dist: # we are not getting closer anymore!
+
+                robot.speed(0)
+                WHEELS.release()
+                robot.face(x, y, w, back = backwards).result()
+                WHEELS.acquire()
+                robot.speed(v = v if not backwards else -v)
 
 
-        if robot.bumper:
-            logger.warning("Bumped into something!")
-            robot.speed(0)
-            WHEELS.release()
-            robot.resolve_collision().result()
-            face(x, y, w, back = backwards).result()
-            WHEELS.acquire()
-            robot.speed(v = v if not backwards else -v)
+            if robot.bumper:
+                logger.warning("Bumped into something!")
+                robot.speed(0)
+                WHEELS.release()
+                robot.resolve_collision().result()
+                face(x, y, w, back = backwards).result()
+                WHEELS.acquire()
+                robot.speed(v = v if not backwards else -v)
 
-        prev_dist = dist
-        time.sleep(0.1)
+            prev_dist = dist
+            time.sleep(0.1)
 
-    robot.speed(0)
+    except ActionCancelled:
+        logger.warning("Goto action cancelled. Stopping here.")
+    finally:
+        robot.speed(0)
 
 @action
 def resolve_collision(robot):

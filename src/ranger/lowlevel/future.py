@@ -1,21 +1,66 @@
 """
 Extension of Python futures to support robot action management.
 
-The main change is the storage of a unique 'action_id' for
-each task submitted to the Executor in a way accessible to the
-action itself (via threading.local().action_id).
+The main changes are:
+ - the storage of a unique 'action_id' for
+   each task submitted to the Executor in a way accessible to the
+   action itself.
+ - the use of 'PausableThreads', ie threads in which cancellation and
+   pause can be signaled (using custom exceptions as signals).
 """
+import logging; logger = logging.getLogger("ranger.actions")
 import uuid
 import sys
 
 try:
     from concurrent.futures import ThreadPoolExecutor, Future
+    from concurrent.futures.thread import _worker, _thread_references
 except ImportError:
     import sys
     sys.stderr.write("[error] install python-concurrent.futures\n")
     sys.exit(1)
 
-from threading import local
+import weakref
+import threading 
+import thread # for get_ident
+
+from ranger.exceptions import ActionCancelled, ActionPaused
+
+# this dictionary keep track of which thread runs which action.
+# useful for notifying cancellation/pauses
+_actions_threads = dict()
+
+class PausableThread(threading.Thread):
+    """ Based on http://ideone.com/HBvezh
+    """
+    def cancel(self):
+        self.__cancel = True
+    def pause(self):
+        self.__pause = True
+
+    def _Thread__bootstrap(self):
+        """ The name come from Python name mangling for 
+        __double_leading_underscore_names
+
+        Note that in Python3, __bootstrap becomes _bootstrap, thus
+        making it easier to override.
+        """
+        if threading._trace_hook is not None:
+            logger.warning("Tracing function already registered (debugger?). Task cancellation/pause won't be available.")
+        else:
+            self.__cancel = False
+            self.__pause = False
+            sys.settrace(self.__trace)
+        super(PausableThread, self)._Thread__bootstrap()
+
+    def __trace(self, frame, event, arg):
+        if self.__cancel:
+            self.__cancel = False
+            raise ActionCancelled()
+        if self.__pause:
+            self.__pause = False
+            raise ActionPaused()
+        return self.__trace
 
 class _RobotWorkItem(object):
     def __init__(self, future, fn, args, kwargs):
@@ -28,6 +73,8 @@ class _RobotWorkItem(object):
 
         # Store the action UUID in the thread local storage.
         self.args[0].action_id.id = self.future.id
+        # Store the thread ID that runs this action
+        _actions_threads[self.future.id] = thread.get_ident()
 
         if not self.future.set_running_or_notify_cancel():
             return
@@ -36,22 +83,30 @@ class _RobotWorkItem(object):
             result = self.fn(*self.args, **self.kwargs)
         except BaseException:
             e = sys.exc_info()[1]
+            logger.error("Exception in action <%s>: %s"%(self.fn.__name__, e))
             self.future.set_exception(e)
         else:
             self.future.set_result(result)
+
+        del _actions_threads[self.future.id]
 
         # clear the thread's action_id to make clear we are done
         self.args[0].action_id.id = None
 
 class RobotAction(Future):
-    def __init__(self):
+    def __init__(self, executor):
         Future.__init__(self)
 
         self.id = uuid.uuid4()
+        self._executor = executor
 
     def cancel(self):
-        # TODO
-        pass
+        if self.done():
+            return
+        cancelled = super(RobotAction, self).cancel()
+        if not cancelled: # already running
+            self._executor.cancel_action(self)
+            self.exception(timeout = 0.5) # waits this amount of time for the task to effectively complete
 
     def wait(self):
         """ alias for result()
@@ -91,6 +146,8 @@ class RobotActionExecutor(ThreadPoolExecutor):
     def __init__(self, max_workers):
         ThreadPoolExecutor.__init__(self, max_workers)
 
+        self._threads_id = dict()
+
         self.futures = []
 
 
@@ -100,7 +157,7 @@ class RobotActionExecutor(ThreadPoolExecutor):
                 raise RuntimeError('cannot schedule new futures after shutdown')
 
             #f = _base.Future()
-            f = RobotAction()
+            f = RobotAction(self)
             w = _RobotWorkItem(f, fn, args, kwargs)
 
             self._work_queue.put(w)
@@ -109,8 +166,37 @@ class RobotActionExecutor(ThreadPoolExecutor):
             self.futures.append(f)
             return f
 
+    def _adjust_thread_count(self):
+        # TODO(bquinlan): Should avoid creating new threads if there are more
+        # idle threads than items in the work queue.
+        if len(self._threads) < self._max_workers:
+            t = PausableThread(target=_worker,
+                                 args=(weakref.ref(self), self._work_queue))
+            t.daemon = True
+            t.start()
+            self._threads.add(t)
+            self._threads_id[t.ident] = weakref.ref(t)
+            _thread_references.add(weakref.ref(t))
+
+
+    def _get_thread_for_action(self, action_id):
+        if action_id not in _actions_threads:
+            return None
+        else:
+            return self._threads_id[_actions_threads[action_id]]() # weakref!
+
+
+    def cancel_action(self, future):
+        if future.done():
+            return
+
+        t = self._get_thread_for_action(future.id)
+        if t is None: # action not yet running? we can properly remove it from the job queue
+            future.cancel()
+        else:
+            t.cancel() # signal that we cancel the action
+
 
     def cancel_all(self):
         for f in self.futures:
-            if not f.done():
-                f.cancel()
+            cancel_action(f)
