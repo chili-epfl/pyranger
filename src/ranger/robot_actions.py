@@ -105,7 +105,7 @@ class RobotAction(Future):
             return
         cancelled = super(RobotAction, self).cancel()
         if not cancelled: # already running
-            self._executor.cancel_action(self)
+            self._executor.signal_cancellation(self)
             self.exception(timeout = 0.5) # waits this amount of time for the task to effectively complete
 
     def wait(self):
@@ -186,17 +186,15 @@ class RobotActionExecutor(ThreadPoolExecutor):
             return self._threads_id[_actions_threads[action_id]]() # weakref!
 
 
-    def cancel_action(self, future):
-        if future.done():
-            return
+    def signal_cancellation(self, future):
 
         t = self._get_thread_for_action(future.id)
-        if t is None: # action not yet running? we can properly remove it from the job queue
-            future.cancel()
-        else:
+        if t is not None:
             t.cancel() # signal that we cancel the action
 
 
     def cancel_all(self):
+        """ Blocks until all the currently running actions are actually stopped.
+        """
         for f in self.futures:
-            cancel_action(f)
+            f.cancel()
