@@ -11,7 +11,7 @@ console.setFormatter(formatter)
 
 toplogger.addHandler(console)
 
-from ranger.lowlevel.ranger_aseba import ID
+from ranger.res import ID, SOUNDS, PATTERNS
 from ranger import get_robot
 from ranger.actions.look import *
 

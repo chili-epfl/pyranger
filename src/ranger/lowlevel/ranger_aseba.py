@@ -15,14 +15,6 @@ MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
 RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
 
-ID = dict(BEACON = 0,
-          ROBOT1 = 1,
-          ROBOT2 = 2,
-          STATION1 = 4,
-          STATION2 = 5)
-
-ID["MYSTATION"] = ID["STATION1"] # TODO multirobot
-
 BATTERY_LOW_THRESHOLD = 7200 #mV
 
 _robot = None
