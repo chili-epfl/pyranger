@@ -1,4 +1,3 @@
-import logging; logger = logging.getLogger("ranger.resources")
 from threading import Lock
 class Resource:
     def __init__(self):
