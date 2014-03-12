@@ -21,18 +21,27 @@ def dock_charging(robot):
 
 @action
 @lock(WHEELS)
-def face_beacon(robot, beacon_id):
+def face_beacon(robot, beacon_id, w = 0.5, back = False):
 
-    turning = False
-    while(robot.beacons[beacon_id].orientation > EPSILON_RAD and \
-          robot.beacons[beacon_id].orientation < (2 * math.pi) - EPSILON_RAD):
+    try:
+        while(True):
 
-        if not turning:
-            robot.speed(w = 0.1) # rad.s^-1
-            turning = True
-        time.sleep(0.1)
+            angle = robot.normalize_angle(robot.beacons[beacon_id].orientation)
+            if back:
+                angle = robot.normalize_angle(angle + math.pi)
 
-    robot.speed(0)
+            if abs(angle) < EPSILON_RAD:
+                break
+
+            #TODO: ease in, ease out
+            robot.speed(w = math.copysign(w, angle)) # rad.s^-1
+            time.sleep(0.1)
+
+    except ActionCancelled:
+        logger.warning("face_beacon action cancelled. Stopping here.")
+    finally:
+        robot.speed(0)
+
 
 
 @action
@@ -82,6 +91,18 @@ def turn(robot, angle, w = 0.5):
     robot.speed(w = w if angle > 0 else -w)
     time.sleep(duration)
     robot.speed(0)
+
+@action
+@lock(WHEELS)
+def navigate_to(robot, beacon_id, v = 0.1, w = 0.5, distance_to_target = 0.3, backwards = False):
+    try:
+        logger.info("Starting navigation to R&B %s" % beacon_id)
+        #TODO!!
+    except ActionCancelled:
+        logger.warning("navigate_to action cancelled. Stopping here.")
+    finally:
+        robot.speed(0)
+
 
 @action
 @lock(WHEELS)
