@@ -11,6 +11,7 @@ from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.introspection import introspection
 from ranger.events import Events
+from ranger.robot_actions import RobotActionExecutor
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
@@ -43,6 +44,9 @@ def clamp(v, vmin, vmax):
 
 def _element_clip(list_i, min_val, max_val):
     return [clamp(i, min_val, max_val) for i in list_i]
+
+executor = RobotActionExecutor(max_workers = 10) # at most 10 tasks in parallel
+
 
 
 class _RangerLowLevel():
@@ -260,6 +264,9 @@ class _RangerLowLevel():
         the acceptable conditions.
         """
         self.on(var, **kwargs).wait()
+
+    def cancel_all(self):
+        executor.cancel_all()
 
     def _process_main_feedback(self, msg, with_encoders = True):
         if introspection:

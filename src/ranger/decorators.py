@@ -1,10 +1,8 @@
 import time
 
 from resources import *
-from ranger.robot_actions import RobotActionExecutor
 from ranger.introspection import introspection
-
-executor = RobotActionExecutor(max_workers = 10) # at most 10 tasks in parallel
+from lowlevel.ranger_aseba import executor
 
 def action(fn):
     """
