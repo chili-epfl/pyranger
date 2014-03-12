@@ -1,7 +1,18 @@
+import logging; logger = logging.getLogger("ranger.look")
 import time
 from random import uniform as rand
 from ranger.decorators import action, lock
 from ranger.resources import *
+
+@action
+@lock(EYES)
+def openeyes(robot):
+    robot.eyes(l_upper_lid = 100)
+
+@action
+@lock(EYES)
+def closeeyes(robot):
+    robot.eyes(l_upper_lid = 0)
 
 @action
 @lock(EYES)
