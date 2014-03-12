@@ -97,7 +97,7 @@ class RobotAction(Future):
     def __init__(self, executor):
         Future.__init__(self)
 
-        self.id = uuid.uuid4()
+        self.id = str(uuid.uuid4())
         self._executor = executor
 
     def cancel(self):

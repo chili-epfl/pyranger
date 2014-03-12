@@ -86,18 +86,30 @@ class EventMonitor:
 
     def do(self, cb):
 
+        if introspection:
+            introspection.action_subscribe_event(self.robot.action_id.id, str(self))
+
         # first add callback? start a thread to monitor the event!
         if not self.thread:
             self.monitoring = True
-            self.thread = threading.Thread(target=self.monitor)
+            self.thread = threading.Thread(target=self._monitor, args=[self.robot.action_id.id])
             self.thread.start()
 
         self.cbs.append(cb)
         return self # to allow for chaining
 
-    def monitor(self):
+    def _monitor(self, owner):
+        
+        # we are in a new thread, and we may execute several actions from there:
+        # we need to carry on the action ID
+        self.robot.action_id.id = owner
+
         while self.monitoring:
-            self.wait_for_condition()
+            self._wait_for_condition()
+
+            if introspection:
+                introspection.action_event_fired(owner, str(self))
+
             for cb in self.cbs:
                 cb()
             if self.oneshot:
@@ -108,7 +120,7 @@ class EventMonitor:
         if self.thread:
             self.thread.join()
 
-    def check_condition(self, val):
+    def _check_condition(self, val):
 
         if self.mode == EventMonitor.VALUE and val == self.target:
             return True
@@ -124,7 +136,7 @@ class EventMonitor:
             return True
 
 
-    def wait_for_condition(self, timeout = None):
+    def _wait_for_condition(self, timeout = None):
 
         if not self.robot.dummy:
             if self.var not in self.robot.state:
@@ -137,7 +149,7 @@ class EventMonitor:
 
 
             self.robot.update.acquire()
-            while not self.check_condition(self.robot.state[self.var]):
+            while not self._check_condition(self.robot.state[self.var]):
                 self.robot.update.wait(timeout)
             self.robot.update.release()
 
@@ -149,10 +161,10 @@ class EventMonitor:
         """
 
         if introspection:
-            introspection.action_waiting(self.robot.action_id.id, self.var)
+            introspection.action_waiting(self.robot.action_id.id, str(self))
 
 
-        self.wait_for_condition(timeout)
+        self._wait_for_condition(timeout)
 
 
         if introspection:
