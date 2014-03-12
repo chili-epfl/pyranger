@@ -4,7 +4,7 @@ import time, math
 from random import uniform as rand
 from ranger.decorators import action, lock
 from ranger.resources import *
-from ranger.exceptions import ActionCancelled
+from ranger.signals import ActionCancelled
 
 EPSILON_RAD = 0.05
 

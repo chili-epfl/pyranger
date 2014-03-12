@@ -1,8 +1,7 @@
-from lowlevel.future import RobotActionExecutor
-from threading import local # to access the action id.
 import time
 
 from resources import *
+from ranger.robot_actions import RobotActionExecutor
 from ranger.introspection import introspection
 
 executor = RobotActionExecutor(max_workers = 10) # at most 10 tasks in parallel
