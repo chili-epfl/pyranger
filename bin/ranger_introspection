@@ -14,7 +14,18 @@ class ActionState:
     COMPLETED = 2
     WAITING = 3
 
-    def __init__(self, name, owner, parent, args, kwargs, state = RUNNING, arg_str = None, children = None, started_time = None, completed_time = None, waiting_on = None):
+    def __init__(self, name, 
+                       owner, 
+                       parent, 
+                       args, 
+                       kwargs, 
+                       state = RUNNING, 
+                       arg_str = None, 
+                       children = None, 
+                       started_time = None, 
+                       completed_time = None, 
+                       waiting_on = None,
+                       events = None):
         self.name = name
         self.args = args
         self.kwargs = kwargs
@@ -36,6 +47,7 @@ class ActionState:
 
         self.parent = parent
         self.children = children if children else []
+        self.events = events if events else []
 
         self.waiting_on = waiting_on
         logging.info("%.3f\t%s\t%s%s started." %(self.started_time, self.owner, self.name, self.arg_str))
@@ -82,13 +94,13 @@ class IntrospectionServer(object):
         action = self._state[owner]
         action.completed()
 
-    def action_waiting(self, owner, sensor):
+    def action_waiting(self, owner, condition):
         self.last_ping = time.time()
 
         action = self._state[owner]
-        action.waiting_on = sensor
+        action.waiting_on = condition
         action.state = ActionState.WAITING
-        logging.info("%.3f\t%s waiting on <%s>." %(time.time(), owner, sensor))
+        logging.info("%.3f\t%s waiting on <%s>." %(time.time(), owner, condition))
 
     def action_waiting_over(self, owner):
         self.last_ping = time.time()
@@ -96,6 +108,16 @@ class IntrospectionServer(object):
         action = self._state[owner]
         action.state = ActionState.RUNNING
         logging.info("%.3f\t%s stopped waiting." %(time.time(), owner))
+
+    def action_subscribe_event(self, owner, condition):
+        self.last_ping = time.time()
+
+        action = self._state[owner]
+        action.events += condition
+        logging.info("%.3f\t%s now monitors %s." %(time.time(), owner, condition))
+
+    def action_event_fired(self, owner, condition):
+        pass
 
     def ping(self):
 
