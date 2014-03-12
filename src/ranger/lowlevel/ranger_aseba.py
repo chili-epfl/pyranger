@@ -10,6 +10,7 @@ from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.introspection import introspection
+from ranger.events import Events
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
@@ -91,6 +92,10 @@ class _RangerLowLevel():
 
         self.action_id = threading.local() # current action ID
         self.action_id.id = 0 # initially 0 (the main task)
+
+        self.events = Events(self)
+        # make the 'Events.on(...)' method available at robot level
+        self.on = self.events.on
 
         #######################################################################
         #                       ASEBA initialization
@@ -250,59 +255,11 @@ class _RangerLowLevel():
             if wait_duration > MAX_WAIT:
                 raise Exception("The robot does not transmit its state!! Check the connection to the aseba network.")
 
-    def wait(self, var, value = True, above = None, below = None):
-        """ waits until the state value 'var' fulfill some condition:
-                - if 'above' is set, until var > above
-                - if 'below' is set, until var < below
-                - else if value is set (default to True), until var = value
-
+    def wait(self, var, **kwargs):
+        """ Alias to wait on a given condition. Cf EventMonitor for details on
+        the acceptable conditions.
         """
-        if self.dummy:
-            return
-
-        if var not in self.STATE:
-            raise Exception("%s is not part of the robot state" % var)
-
-        if introspection:
-            introspection.action_waiting(threading.current_thread().ident, var)
-
-        if var not in self.state:
-            # value not yet read from the robot.
-            logger.info("Waiting for %s to be published by the robot..." % var)
-            self.update.acquire()
-            while not var in self.state:
-                self.update.wait()
-            self.update.release()
-
-
-        if above is not None:
-            if not self.state[var] > above:
-
-                self.update.acquire()
-                while not self.state[var] > above:
-                    self.update.wait()
-                self.update.release()
-
-        elif below is not None:
-            if not self.state[var] < below:
-
-                self.update.acquire()
-                while not self.state[var] < below:
-                    self.update.wait()
-                self.update.release()
-
-        else:
-            if not self.state[var] == value:
-
-                self.update.acquire()
-                while not self.state[var] == value:
-                    self.update.wait()
-                self.update.release()
-
-
-        if introspection:
-            introspection.action_waiting_over(threading.current_thread().ident)
-
+        self.on(var, **kwargs).wait()
 
     def _process_main_feedback(self, msg, with_encoders = True):
         if introspection:
@@ -456,6 +413,7 @@ class _RangerLowLevel():
         self.close()
 
     def close(self):
+        self.events.close()
         self.aseba.close()
         self.aseba_thread.join()
 
