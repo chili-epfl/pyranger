@@ -8,14 +8,13 @@ import time
 import sys
 
 from threading import Thread
-from consoletk import ConsoleTK
 
 class ActionState:
     RUNNING = 1
     COMPLETED = 2
     WAITING = 3
 
-    def __init__(self, name, owner, parent, args, kwargs, state = RUNNING, arg_str = None, children = None, started_time = None, completed_time = None):
+    def __init__(self, name, owner, parent, args, kwargs, state = RUNNING, arg_str = None, children = None, started_time = None, completed_time = None, waiting_on = None):
         self.name = name
         self.args = args
         self.kwargs = kwargs
@@ -38,6 +37,7 @@ class ActionState:
         self.parent = parent
         self.children = children if children else []
 
+        self.waiting_on = waiting_on
         logging.info("%.3f\t%s\t%s%s started." %(self.started_time, self.owner, self.name, self.arg_str))
 
     def completed(self):
@@ -123,6 +123,7 @@ class IntrospectionPrinter(object):
         self.running = False
         self.display_thr.join()
         self.out.moveto(0, 0)
+        self.out.close()
 
     def printer(self):
 
@@ -199,6 +200,7 @@ if __name__ == "__main__":
 
 
     else:
+        from consoletk import ConsoleTK
         uri = "PYRONAME:ranger.introspection" # uses name server
         introspection = Pyro4.Proxy(uri)
    
