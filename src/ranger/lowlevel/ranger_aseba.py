@@ -189,6 +189,9 @@ class _RangerLowLevel():
                                      l_upper_lid, l_lower_lid,
                                      r_upper_lid, r_lower_lid)
 
+    def led_pattern(self, pattern_id, repeat = False):
+        self._send_evt("playLedVid", pattern_id, repeat)
+
     def speed(self, l = None, r = None, v = None, w = None):
         """ Set the motor's speed, in {m, rad}.s^-1.
 
