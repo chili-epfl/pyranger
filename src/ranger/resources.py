@@ -38,4 +38,4 @@ REYE = CompoundResource(RPUPIL, RLID)
 LIDS = CompoundResource(LLID, RLID)
 EYES = CompoundResource(LEYE, REYE)
 WHEELS = Resource()
-
+AUDIO = Resource()
