@@ -33,6 +33,10 @@ _actions_threads = dict()
 class PausableThread(threading.Thread):
     """ Based on http://ideone.com/HBvezh
     """
+    def __init__(self, *args, **kwargs):
+        threading.Thread.__init__(self, *args, **kwargs)
+        self.debugger_trace = None
+
     def cancel(self):
         self.__cancel = True
     def pause(self):
@@ -46,19 +50,27 @@ class PausableThread(threading.Thread):
         making it easier to override.
         """
         if threading._trace_hook is not None:
-            logger.warning("Tracing function already registered (debugger?). Task cancellation/pause won't be available.")
-        else:
-            self.__cancel = False
-            self.__pause = False
-            sys.settrace(self.__trace)
+            self.debugger_trace = threading._trace_hook
+            #logger.warning("Tracing function already registered (debugger?). Task cancellation/pause won't be available.")
+        #else:
+        self.__cancel = False
+        self.__pause = False
+        sys.settrace(self.__trace)
+
+        self.name = "Ranger action thread (initialization)"
         super(PausableThread, self)._Thread__bootstrap()
 
     def __trace(self, frame, event, arg):
+        if self.debugger_trace:
+            self.debugger_trace(frame, event, arg)
+
         if self.__cancel:
             self.__cancel = False
+            logger.debug("Cancelling thread <%s>" % self.name)
             raise ActionCancelled()
         if self.__pause:
             self.__pause = False
+            logger.debug("Pausing thread <%s>" % self.name)
             raise ActionPaused()
         return self.__trace
 
@@ -75,6 +87,7 @@ class _RobotWorkItem(object):
         self.args[0].action_id.id = self.future.id
         # Store the thread ID that runs this action
         _actions_threads[self.future.id] = thread.get_ident()
+
 
         if not self.future.set_running_or_notify_cancel():
             return
