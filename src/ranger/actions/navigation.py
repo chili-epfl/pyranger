@@ -94,11 +94,10 @@ def goto(robot,
     """
 
     try:
-        WHEELS.release()
-        action = robot.face(pose, w, back = backwards)
-        #waits until the robot faces the destination
-        action.result()
-        WHEELS.acquire()
+        with WHEELS:
+            action = robot.face(pose, w, backwards = backwards)
+            #waits until the robot faces the destination
+            action.result()
 
         robot.speed(v = v if not backwards else -v)
 
@@ -116,19 +115,17 @@ def goto(robot,
                 or dist > prev_dist: # we are not getting closer anymore!
 
                 robot.speed(0)
-                WHEELS.release()
-                robot.face(pose, w, backwards = backwards).result()
-                WHEELS.acquire()
+                with WHEELS:
+                    robot.face(pose, w, backwards = backwards).result()
                 robot.speed(v = v if not backwards else -v)
 
 
             if robot.bumper:
                 logger.warning("Bumped into something!")
                 robot.speed(0)
-                WHEELS.release()
-                robot.resolve_collision().result()
-                face(pose, w, backwards = backwards).result()
-                WHEELS.acquire()
+                with WHEELS:
+                    robot.resolve_collision().result()
+                    face(pose, w, backwards = backwards).result()
                 robot.speed(v = v if not backwards else -v)
 
             prev_dist = dist
