@@ -1,7 +1,11 @@
 from threading import Lock
 class Resource:
-    def __init__(self):
+    def __init__(self, name = ""):
         self.lock = Lock()
+        self.name = name
+
+    def __str__(self):
+        return self.name
 
     def __enter__(self):
         """
@@ -41,8 +45,13 @@ class Resource:
 
 
 class CompoundResource:
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.resources = args
+        self.name = kwargs.get("name", "")
+
+    def __str__(self):
+        return self.name
+
 
     def __enter__(self):
         """ cf doc of Resource.__enter__.
@@ -72,14 +81,14 @@ class ResourceLockedError(RuntimeError):
         return repr(self.value)
 
 
-LPUPIL = Resource()
-RPUPIL = Resource()
-LLID = Resource()
-RLID = Resource()
-LEYE = CompoundResource(LPUPIL, LLID)
-REYE = CompoundResource(RPUPIL, RLID)
-LIDS = CompoundResource(LLID, RLID)
-EYES = CompoundResource(LEYE, REYE)
-WHEELS = Resource()
-AUDIO = Resource()
-LEDS = Resource()
+LPUPIL = Resource("left pupil")
+RPUPIL = Resource("right pupil")
+LLID = Resource("left lid")
+RLID = Resource("right lid")
+LEYE = CompoundResource(LPUPIL, LLID, name = "left eye")
+REYE = CompoundResource(RPUPIL, RLID, name = "right eye")
+LIDS = CompoundResource(LLID, RLID, name = "eyelids")
+EYES = CompoundResource(LEYE, REYE, name = "eyes")
+WHEELS = Resource("wheels")
+AUDIO = Resource("audio")
+LEDS = Resource("LEDs")
