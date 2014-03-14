@@ -24,7 +24,7 @@ import weakref
 import threading 
 import thread # for get_ident
 
-from ranger.exceptions import ActionCancelled, ActionPaused
+from ranger.signals import ActionCancelled, ActionPaused
 
 # this dictionary keep track of which thread runs which action.
 # useful for notifying cancellation/pauses
