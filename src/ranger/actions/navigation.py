@@ -16,64 +16,40 @@ def stop(robot):
 @action
 @lock(WHEELS)
 def dock_charging(robot):
-    pass
-
-
-@action
-@lock(WHEELS)
-def face_beacon(robot, beacon_id, w = 0.5, back = False):
-
-    try:
-        while(True):
-
-            angle = robot.normalize_angle(robot.beacons[beacon_id].orientation)
-            if back:
-                angle = robot.normalize_angle(angle + math.pi)
-
-            if abs(angle) < EPSILON_RAD:
-                break
-
-            #TODO: ease in, ease out
-            robot.speed(w = math.copysign(w, angle)) # rad.s^-1
-            time.sleep(0.1)
-
-    except ActionCancelled:
-        logger.warning("face_beacon action cancelled. Stopping here.")
-    finally:
-        robot.speed(0)
-
-
+    raise NotImplementedError
 
 @action
-def face(robot, x, y, w = 0.5, back = False):
-    """ Rotates the robot to face a given target point, in /odom frame.
+def face(robot, pose, w = 0.5, backwards = False):
+    """ Rotates the robot to face a given target point.
 
     :param speed: rotation speed, in rad.s^-1
-    :param back: (default: False) If true, face 'backwards' (ie turn back to target)
+    :param backwards: (default: False) If true, face 'backwards' (ie turn back to target)
     """
-    angle = robot.angleto(x, y)
-    if back:
-        angle = robot.normalize_angle(angle + math.pi)
+    angle, _  = robot.pose.pantilt(pose)
+
+    if backwards:
+        angle = robot.pose.normalize_angle(angle + math.pi)
 
     robot.turn(angle, w).result()
 
-@action
-def back(robot, x, y, w = 0.5):
-    robot.face(x,y, w, back = True).result()
 
 @action
 @lock(WHEELS)
 def move(robot, distance, v = 0.1):
     """ Move forward (or backward if distance is negative) of a given distance.
 
-    For now, open-loop.
+    DO NOT CHECK FOR COLLISIONS!
 
     :param distance: distance to move, in meters
     :param v: (default: 0.5) linear velocity
     """
-    duration = abs(distance / v)
+    initial_pose = robot.pose.myself()
+    #TODO: ease in/ease out
     robot.speed(v if distance > 0 else -v)
-    time.sleep(duration)
+
+    while robot.pose.distance(initial_pose) < abs(distance):
+        time.sleep(0.1)
+
     robot.speed(0)
 
 @action
@@ -81,62 +57,67 @@ def move(robot, distance, v = 0.1):
 def turn(robot, angle, w = 0.5):
     """ Turns of a given angle.
 
-    For now, open-loop.
+    DO NOT CHECK FOR COLLISIONS!
 
     :param angle: angle to turn, in radians
-    :param w: (default: 0.2) rotation velocity
+    :param w: (default: 0.5) rotation velocity
     """
-
-    duration = abs(angle / w)
+    initial_pose = robot.pose.myself()
+    #TODO: ease in/ease out
     robot.speed(w = w if angle > 0 else -w)
-    time.sleep(duration)
+
+    while abs(robot.pose.pantilt(initial_pose)[0]) < abs(angle):
+        time.sleep(0.1)
+
     robot.speed(0)
 
-@action
-@lock(WHEELS)
-def navigate_to(robot, beacon_id, v = 0.1, w = 0.5, distance_to_target = 0.3, backwards = False):
-    try:
-        logger.info("Starting navigation to R&B %s" % beacon_id)
-        #TODO!!
-    except ActionCancelled:
-        logger.warning("navigate_to action cancelled. Stopping here.")
-    finally:
-        robot.speed(0)
-
 
 @action
 @lock(WHEELS)
-def goto(robot, x, y, v = 0.1, w = 0.5, epsilon = 0.1, backwards = False):
+def goto(robot, 
+        pose, 
+        v = 0.1, w = 0.5, 
+        epsilon = 0.1, epsilon2 = 0.05,
+        distance_to_target = 0.0, 
+        ignore_orientation = False,
+        backwards = False):
     """
 
-    :param x, y: target destination, in meters in /odom frame
+    :param pose: target destination (including the desired orientation!)
     :param v: desired linear velocity
     :param w: desired rotation velocity
     :param epsilon: the acceptable error for the target to be reached, in meters
+    :param epsilon2: the acceptable orientation error for the target to be reached, in radians
+    :param distance_to_target: desired final distance to target (default: 0)
+    :param ignore_orientation: if true, do not set the final robot orientation
     :param backwards: if true, move backwards
     """
 
     try:
         WHEELS.release()
-        action = robot.face(x, y, w, back = backwards)
+        action = robot.face(pose, w, back = backwards)
         #waits until the robot faces the destination
         action.result()
         WHEELS.acquire()
 
         robot.speed(v = v if not backwards else -v)
 
-        prev_dist = robot.distanceto(x, y)
+        prev_dist = robot.pose.distance(pose)
 
         while True:
-            dist = robot.distanceto(x, y)
-            if dist < epsilon:
+            dist = robot.pose.distance(pose)
+            angle, _ = robot.pose.pantilt(pose)
+
+            if dist < epsilon + distance_to_target:
                 logger.info("Reached target")
                 break
-            if dist > prev_dist: # we are not getting closer anymore!
+
+            if abs(angle) > epsilon2 \
+                or dist > prev_dist: # we are not getting closer anymore!
 
                 robot.speed(0)
                 WHEELS.release()
-                robot.face(x, y, w, back = backwards).result()
+                robot.face(pose, w, backwards = backwards).result()
                 WHEELS.acquire()
                 robot.speed(v = v if not backwards else -v)
 
@@ -146,7 +127,7 @@ def goto(robot, x, y, v = 0.1, w = 0.5, epsilon = 0.1, backwards = False):
                 robot.speed(0)
                 WHEELS.release()
                 robot.resolve_collision().result()
-                face(x, y, w, back = backwards).result()
+                face(pose, w, backwards = backwards).result()
                 WHEELS.acquire()
                 robot.speed(v = v if not backwards else -v)
 
