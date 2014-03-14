@@ -27,7 +27,7 @@ with get_robot(dummy = True) as robot:
     def on_lolette():
         logger.info("Lolette is back!")
         robot.cancel_all()
-        robot.navigate_to(ID["MYSTATION"]).wait()
+        robot.goto("station").wait()
         robot.closeeyes()
         robot.dock_for_charging()
 
@@ -35,8 +35,8 @@ with get_robot(dummy = True) as robot:
         logger.info("Lolette removed!")
         robot.cancel_all()
         robot.openeyes()
-        robot.navigate_to(ID["BEACON"]).wait()
-        robot.dock_on_beacon()
+        robot.goto("beacon_%s" % ID["BEACON"]).wait()
+        #TODO: set the targe orientation
 
     def on_toy_added():
         logger.info("Toy added!")
@@ -57,10 +57,14 @@ with get_robot(dummy = True) as robot:
     robot.on("scale", increase = 100).do(on_toy_added)
     robot.on("scale", decrease = 100).do(on_toy_removed)
 
-    while True:
-        time.sleep(0.5)
+    try:
+        while True:
+            time.sleep(0.5)
 
-        if introspection:
-            introspection.ping()
+            if introspection:
+                introspection.ping()
+    except KeyboardInterrupt:
+        robot.events.close()
+        robot.cancel_all()
 
     logger.info("Byebye")
