@@ -20,6 +20,47 @@ def dock_for_charging(robot):
     logger.error("Not implemented!")
 
 @action
+def look_for_beacon(robot, beacon_id):
+    
+    def isseen():
+        if beacon_id in robot.beacons and \
+            not robot.beacons[beacon_id].obsolete():
+                return True
+        return False
+
+    if isseen(): return True
+
+    sneakin = None
+    turning = None
+    try:
+        sneakin = robot.sneak_in()
+
+        for i in range(3):
+            turning = robot.turn(math.pi / 4)
+            turning.wait()
+            if isseen(): break
+            turning = robot.turn(-math.pi / 4)
+            turning.wait()
+            if isseen(): break
+
+        sneakin.cancel()
+
+        if isseen():
+            logger.info("Beacon %s seen." % beacon_id)
+            return True
+        else:
+            logger.warning("Beacon %s not found." % beacon_id)
+            return False
+    except ActionCancelled:
+        if turning:
+            turning.cancel()
+        robot.speed(0)
+        if sneakin:
+            sneakin.cancel()
+        print("Bouh lilil")
+        return False
+
+@action
 def face(robot, pose, w = 0.5, backwards = False):
     """ Rotates the robot to face a given target point.
 
