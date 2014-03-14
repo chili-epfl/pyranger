@@ -35,8 +35,12 @@ with get_robot(dummy = True) as robot:
         logger.info("Lolette removed!")
         robot.cancel_all()
         robot.openeyes()
+
+        beacon_found = False
+        while not beacon_found:
+            beacon_found = robot.look_for_beacon(ID["BEACON"]).result()
         robot.goto("beacon_%s" % ID["BEACON"]).wait()
-        #TODO: set the targe orientation
+        #TODO: set the target orientation
 
     def on_toy_added():
         logger.info("Toy added!")
