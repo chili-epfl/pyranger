@@ -466,6 +466,10 @@ class Beacon:
 
         self.r = data[1] / 1000.  # in meters
 
+        # beacon cartesian coordinates, *relative to the robot frame!*
+        self.x = math.cos(self.orientation) * self.r
+        self.y = math.sin(self.orientation) * self.r
+
     def obsolete(self):
         if time.time() - self.update > self.OBSOLETE_AFTER:
             return True
