@@ -6,6 +6,7 @@ import sys
 class WavePlayer:
     def __init__(self):
         self.p = pyaudio.PyAudio()
+        self.stream = None
 
     def play(self, filename):
 
@@ -26,7 +27,7 @@ class WavePlayer:
         # create an audio object
 
         # open stream based on the wave object which has been input.
-        stream = self.p.open(format = self.p.get_format_from_width(wf.getsampwidth()),
+        self.stream = self.p.open(format = self.p.get_format_from_width(wf.getsampwidth()),
                         channels = wf.getnchannels(),
                         rate = wf.getframerate(),
                         output = True)
@@ -37,14 +38,16 @@ class WavePlayer:
         # play stream (looping from beginning of file to the end)
         while data != '' and self.playing:
             # writing to the stream is what *actually* plays the sound.
-            stream.write(data)
+            self.stream.write(data)
             data = wf.readframes(chunk)
 
         # cleanup stuff.
-        stream.close()    
+        self.stream.close()    
 
     def stop(self):
         self.playing = False
+        if self.stream:
+            self.stream.close()
 
     def close(self):
         self.playing = False
