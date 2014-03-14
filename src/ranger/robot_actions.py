@@ -13,7 +13,7 @@ import uuid
 import sys
 
 try:
-    from concurrent.futures import ThreadPoolExecutor, Future
+    from concurrent.futures import ThreadPoolExecutor, Future, TimeoutError
     from concurrent.futures.thread import _worker, _thread_references
 except ImportError:
     import sys
@@ -94,9 +94,10 @@ class _RobotWorkItem(object):
         self.args[0].action_id.id = None
 
 class RobotAction(Future):
-    def __init__(self, executor):
+    def __init__(self, executor, actionname):
         Future.__init__(self)
 
+        self.actionname = actionname
         self.id = str(uuid.uuid4())
         self._executor = executor
 
@@ -106,7 +107,10 @@ class RobotAction(Future):
         cancelled = super(RobotAction, self).cancel()
         if not cancelled: # already running
             self._executor.signal_cancellation(self)
-            self.exception(timeout = 0.5) # waits this amount of time for the task to effectively complete
+            try:
+                self.exception(timeout = 0.5) # waits this amount of time for the task to effectively complete
+            except TimeoutError:
+                raise RuntimeError("Unable to cancel action %s!" % self.actionname)
 
     def wait(self):
         """ alias for result()
@@ -156,8 +160,16 @@ class RobotActionExecutor(ThreadPoolExecutor):
             if self._shutdown:
                 raise RuntimeError('cannot schedule new futures after shutdown')
 
-            #f = _base.Future()
-            f = RobotAction(self)
+            name = fn.__name__
+            if args and not kwargs:
+                name += "(%s)" % ", ".join([str(a) for a in args[1:]]) # start at 1 because 0 is the robot instance
+            elif kwargs and not args:
+                name += "(%s)" % ", ".join(["%s=%s" % (str(k), str(v)) for k, v in kwargs.items()])
+            elif args and kwargs:
+                name += "(%s, " % ", ".join([str(a) for a in args[1:]])
+                name += "%s)" % ", ".join(["%s=%s" % (str(k), str(v)) for k, v in kwargs.items()])
+
+            f = RobotAction(self, name)
             w = _RobotWorkItem(f, fn, args, kwargs)
 
             self._work_queue.put(w)
