@@ -48,10 +48,14 @@ def move(robot, distance, v = 0.1):
     #TODO: ease in/ease out
     robot.speed(v if distance > 0 else -v)
 
-    while robot.pose.distance(initial_pose) < abs(distance):
-        time.sleep(0.1)
+    try:
+        while robot.pose.distance(initial_pose) < abs(distance):
+            time.sleep(0.1)
 
-    robot.speed(0)
+    except ActionCancelled:
+        pass
+    finally:
+        robot.speed(0)
 
 @action
 @lock(WHEELS)
@@ -67,10 +71,13 @@ def turn(robot, angle, w = 0.5):
     #TODO: ease in/ease out
     robot.speed(w = w if angle > 0 else -w)
 
-    while abs(robot.pose.pantilt(initial_pose)[0]) < abs(angle):
-        time.sleep(0.1)
-
-    robot.speed(0)
+    try:
+        while abs(robot.pose.pantilt(initial_pose)[0]) < abs(angle):
+            time.sleep(0.1)
+    except ActionCancelled:
+        pass
+    finally:
+        robot.speed(0)
 
 
 @action
