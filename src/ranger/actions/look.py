@@ -52,20 +52,22 @@ def openeyes(robot):
 @action
 @lock(EYES)
 def closeeyes(robot):
-    if not robot.eyelids == Eyelids.CLOSE:
+    if not robot.eyelids == Eyelids.CLOSED:
         robot.eyes(0,0, l_upper_lid = 0)
 
 @action
 @lock(EYES)
 def sneak_in(robot):
 
-    robot.eyes(0, 0, 0, 0, rand(18, 25))
-    time.sleep(rand(0.6, 0.7))
-    robot.eyes(rand(55,75), 0,  l_upper_lid = rand(18, 25))
-    time.sleep(rand(1.0,1.5))
-    robot.eyes(rand(-55, -75), 0, l_upper_lid = rand(18,25))
-    time.sleep(rand(1.0, 1.5))
-    robot.eyes(rand(55,75), 0,  l_upper_lid = rand(18, 25))
-    time.sleep(rand(1.0, 1.5))
-    robot.eyes(0, 0)
-
+    try:
+        robot.eyes(0, 0, 0, 0, rand(18, 25))
+        time.sleep(rand(0.6, 0.7))
+        robot.eyes(rand(55,75), 0,  l_upper_lid = rand(18, 25))
+        time.sleep(rand(1.0,1.5))
+        robot.eyes(rand(-55, -75), 0, l_upper_lid = rand(18,25))
+        time.sleep(rand(1.0, 1.5))
+        robot.eyes(rand(55,75), 0,  l_upper_lid = rand(18, 25))
+        time.sleep(rand(1.0, 1.5))
+        robot.eyes(0, 0)
+    except ActionCancelled:
+        robot.eyes(0, 0)
