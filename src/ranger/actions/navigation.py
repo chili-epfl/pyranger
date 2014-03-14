@@ -15,8 +15,9 @@ def stop(robot):
 
 @action
 @lock(WHEELS)
-def dock_charging(robot):
-    raise NotImplementedError
+def dock_for_charging(robot):
+    #raise NotImplementedError
+    logger.error("Not implemented!")
 
 @action
 def face(robot, pose, w = 0.5, backwards = False):
