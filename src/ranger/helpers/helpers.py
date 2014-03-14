@@ -1,5 +1,10 @@
 from collections import deque
 
+# enums in Python, thanks http://stackoverflow.com/questions/36932
+def enum(*sequential, **named):
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    return type('Enum', (), enums)
+
 class valuefilter:
 
     MAX_LENGTH=10

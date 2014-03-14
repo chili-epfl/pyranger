@@ -6,6 +6,8 @@ from ranger.decorators import action, lock
 from ranger.resources import *
 from ranger.signals import ActionCancelled
 
+from ranger.lowlevel.ranger_aseba import Eyelids
+
 def clamp(v, vmin, vmax):
     return max(vmin, min(vmax, v))
 
@@ -44,12 +46,14 @@ def placeeyes(robot, pose):
 @action
 @lock(EYES)
 def openeyes(robot):
-    robot.eyes(0,0, l_upper_lid = 100)
+    if not robot.eyelids == Eyelids.OPEN:
+        robot.eyes(0,0, l_upper_lid = rand(80, 100))
 
 @action
 @lock(EYES)
 def closeeyes(robot):
-    robot.eyes(0,0, l_upper_lid = 0)
+    if not robot.eyelids == Eyelids.CLOSE:
+        robot.eyes(0,0, l_upper_lid = 0)
 
 @action
 @lock(EYES)

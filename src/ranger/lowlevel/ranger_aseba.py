@@ -6,7 +6,7 @@ import threading
 from functools import partial
 
 from aseba import Aseba
-from ranger.helpers.helpers import valuefilter
+from ranger.helpers.helpers import valuefilter, enum
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.helpers.position import PoseManager
@@ -48,7 +48,7 @@ def _element_clip(list_i, min_val, max_val):
 
 executor = RobotActionExecutor(max_workers = 10) # at most 10 tasks in parallel
 
-
+Eyelids = enum("OPEN", "HALFOPEN", "CLOSED", "UNDEFINED") #undefined can occur if the 2 eyes have different lid position
 
 class _RangerLowLevel():
 
@@ -79,7 +79,8 @@ class _RangerLowLevel():
         "y":                    0.0,  # y position of the robot, computed from odometry
         "theta":                0.0,  # orientation of the robot, computed from odometry
         "v":                    0.0,  # linear velocity, in robot's forward direction
-        "w":                    0.0   # rotation velocity
+        "w":                    0.0,   # rotation velocity
+        "eyelids":              Eyelids.UNDEFINED   # state of the eyelids (open, half-open or closed)
         }
 
     def __init__(self, dummy = False, immediate = False):
@@ -187,6 +188,24 @@ class _RangerLowLevel():
         if r_lower_lid is None:
             r_lower_lid = l_lower_lid
 
+        if l_upper_lid > 60 and \
+           l_lower_lid > 60 and \
+           r_upper_lid > 60 and \
+           r_lower_lid > 60:
+               self.state["eyelids"] = Eyelids.OPEN
+        elif l_upper_lid < 60 and l_upper_lid > 10 and \
+             l_lower_lid < 60 and l_lower_lid > 10 and \
+             r_upper_lid < 60 and r_upper_lid > 10 and \
+             r_lower_lid < 60 and r_lower_lid > 10:
+               self.state["eyelids"] = Eyelids.HALFOPEN
+        elif l_upper_lid == 0 and \
+             l_lower_lid == 0 and \
+             r_upper_lid == 0 and \
+             r_lower_lid == 0:
+               self.state["eyelids"] = Eyelids.CLOSED
+        else:
+               self.state["eyelids"] = Eyelids.UNDEFINED
+ 
         self._send_evt("neuilEvent", lx, ly,
                                      rx, ry,
                                      l_upper_lid, l_lower_lid,
