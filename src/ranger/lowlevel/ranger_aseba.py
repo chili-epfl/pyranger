@@ -9,6 +9,7 @@ from aseba import Aseba
 from ranger.helpers.helpers import valuefilter
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
+from ranger.helpers.position import PoseManager
 from ranger.introspection import introspection
 from ranger.events import Events
 from ranger.robot_actions import RobotActionExecutor
@@ -90,6 +91,8 @@ class _RangerLowLevel():
         self.filteredvalues = {} # holds the filters for sensors that need filtering (like scale, IR sensors...)
         self.beacons = {}
         self.odom = Odom()
+
+        self.pose = PoseManager(self)
 
         # creates accessors for each of the fields in STATE
         self._init_accessors()
@@ -224,28 +227,6 @@ class _RangerLowLevel():
 
         self._send_evt("setSpeed", l, r)
 
-    def distanceto(self, x, y):
-        return math.sqrt(math.pow(self.x - x, 2) + \
-                         math.pow(self.y - y, 2))
-
-
-    def angleto(self, x, y, relative = False):
-        if relative:
-            return self.angleto(y + self.state["y"], x + self.state["x"])
-        else:
-            if x == self.state["x"]:
-                return 0. # undefined, really
-            return self.normalize_angle(
-                    - self.state["theta"] + math.atan2(y - self.state["y"], x - self.state["x"])
-                    )
-
-    def normalize_angle(self, angle):
-        """ Returns equivalent angle such as  -pi < angle <= pi
-        """
-        angle = angle % (2 * math.pi) # => angle > 0
-        return angle if angle <= math.pi else (-math.pi + angle % math.pi)
-
-
     def get_full_state(self):
         """Blocks until the full state of the robot has been
         received from the low-level.
@@ -299,7 +280,7 @@ class _RangerLowLevel():
             x,y,th,v,w = self.odom.get()
             self.state["x"] = x
             self.state["y"] = y
-            self.state["theta"] = self.normalize_angle(th)
+            self.state["theta"] = self.pose.normalize_angle(th)
             self.state["v"] = v
             self.state["w"] = w
 
