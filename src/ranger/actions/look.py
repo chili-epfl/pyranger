@@ -44,12 +44,12 @@ def placeeyes(robot, pose):
 @action
 @lock(EYES)
 def openeyes(robot):
-    robot.eyes(l_upper_lid = 100)
+    robot.eyes(0,0, l_upper_lid = 100)
 
 @action
 @lock(EYES)
 def closeeyes(robot):
-    robot.eyes(l_upper_lid = 0)
+    robot.eyes(0,0, l_upper_lid = 0)
 
 @action
 @lock(EYES)
