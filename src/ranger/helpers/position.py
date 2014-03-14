@@ -227,13 +227,13 @@ class PoseManager:
         qx,qy,qz,qw = transformations.quaternion_from_matrix(transformedPose)
         x,y,z = transformations.translation_from_matrix(transformedPose)
 
-        return {"x":x,
-                "y":y,
-                "z":z,
-                "qx":qx,
-                "qy":qy,
-                "qz":qz,
-                "qw":qw,
+        return {"x":float(x),
+                "y":float(y),
+                "z":float(z),
+                "qx":float(qx),
+                "qy":float(qy),
+                "qz":float(qz),
+                "qw":float(qw),
                 "frame": frame}
 
 
@@ -249,8 +249,6 @@ class PoseManager:
         pose = self.inframe(pose, ref)
         pan = self.normalize_angle(numpy.arctan2(pose['y'], pose['x']))
         tilt = self.normalize_angle(numpy.arctan2(pose['z'], pose['x']))
-        
-        logger.debug("Computed head pan: %s, tilt: %s" % (pan, tilt))
         return (pan,tilt)
 
     @staticmethod
@@ -258,10 +256,10 @@ class PoseManager:
         """ Returns equivalent angle such as  -pi < angle <= pi
         """
         angle = angle % (2 * math.pi) # => angle > 0
-        return angle if angle <= math.pi else (-math.pi + angle % math.pi)
+        return float(angle if angle <= math.pi else (-math.pi + angle % math.pi))
 
 
-    def isin(point,polygon):
+    def isin(self, point,polygon):
         """
         Determines if a 2D point is inside a given 2D polygon or not.
         
