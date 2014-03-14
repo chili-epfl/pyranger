@@ -1,8 +1,12 @@
+import logging; logger = logging.getLogger("ranger.actions")
 import time
+
+import threading
 
 from resources import *
 from ranger.introspection import introspection
 from lowlevel.ranger_aseba import executor
+from ranger.signals import ActionCancelled
 
 def action(fn):
     """
@@ -15,21 +19,33 @@ def action(fn):
     # resources
     def lockawarefn(*args, **kwargs):
 
-        # we acquire resources *within the future thread* that
-        # we want to *wait* for.
-        if hasattr(fn, "_locked_res"):
-            for res, wait in fn._locked_res:
-                if wait:
-                    res.acquire(wait)
-
         try:
+            # we acquire resources *within the future thread* that
+            # we want to *wait* for.
+            if hasattr(fn, "_locked_res"):
+                for res, wait in fn._locked_res:
+                    if wait:
+                        threading.current_thread().name = "Ranger Action %s (waiting on resource %s)" % (fn.__name__, res)
+                        res.acquire(wait)
+        except ActionCancelled:
+            # action cancelled while it was waiting for a resource to become
+            # available
+            threading.current_thread().name = "Idle Ranger action thread"
+            return None
+ 
+        try:
+            threading.current_thread().name = "Ranger Action %s (running)" % (fn.__name__)
+            logger.debug("Starting action %s now." % fn.__name__)
             result = fn(*args, **kwargs)
             return result
+        except ActionCancelled:
+            logger.warning("Action cancellation ignored by %s" % fn.__name__)
         finally:
             if hasattr(fn, "_locked_res"):
                 for res, wait in fn._locked_res:
                     res.release()
 
+            threading.current_thread().name = "Idle Ranger action thread"
 
 
     lockawarefn.__name__ = fn.__name__

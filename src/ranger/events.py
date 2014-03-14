@@ -1,6 +1,7 @@
 import logging; logger = logging.getLogger("ranger.events")
-import threading
 import weakref
+
+from robot_actions import PausableThread
 
 from ranger.introspection import introspection
 
@@ -92,8 +93,9 @@ class EventMonitor:
         # first add callback? start a thread to monitor the event!
         if not self.thread:
             self.monitoring = True
-            self.thread = threading.Thread(target=self._monitor, args=[self.robot.action_id.id])
+            self.thread = PausableThread(target=self._monitor, args=[self.robot.action_id.id])
             self.thread.start()
+            self.thread.name = "Event monitor on %s" % self
 
         self.cbs.append(cb)
         return self # to allow for chaining
@@ -118,6 +120,7 @@ class EventMonitor:
     def close(self):
         self.monitoring = False
         if self.thread:
+            self.thread.cancel()
             self.thread.join()
 
     def _check_condition(self, val):

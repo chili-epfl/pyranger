@@ -121,9 +121,13 @@ class RobotAction(Future):
         if not cancelled: # already running
             self._executor.signal_cancellation(self)
             try:
-                self.exception(timeout = 0.5) # waits this amount of time for the task to effectively complete
+                self.exception(timeout = 1) # waits this amount of time for the task to effectively complete
             except TimeoutError:
-                raise RuntimeError("Unable to cancel action %s!" % self.actionname)
+                raise RuntimeError("Unable to cancel action %s (still running 1s after cancellation)!" % self.actionname)
+
+    def result(self):
+        threading.current_thread().name = "Action waiting for sub-action %s" % self.actionname
+        return super(RobotAction, self).result()
 
     def wait(self):
         """ alias for result()
