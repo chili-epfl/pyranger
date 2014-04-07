@@ -31,6 +31,7 @@ def action(fn):
             # action cancelled while it was waiting for a resource to become
             # available
             threading.current_thread().name = "Idle Ranger action thread"
+            logger.debug("Action %s cancelled while it was waiting for a lock on a resource." % fn.__name__)
             return None
  
         try:
@@ -39,7 +40,7 @@ def action(fn):
             result = fn(*args, **kwargs)
             return result
         except ActionCancelled:
-            logger.warning("Action cancellation ignored by %s" % fn.__name__)
+            logger.warning("Action cancellation ignored by %s. Forced stop!" % fn.__name__)
         finally:
             if hasattr(fn, "_locked_res"):
                 for res, wait in fn._locked_res:
@@ -69,7 +70,7 @@ def action(fn):
         if hasattr(fn, "_locked_res"):
             for res, wait in fn._locked_res:
                 if not wait:
-                    got_the_lock = res.acquire(wait)
+                    got_the_lock = res.acquire(False)
 
                     if not got_the_lock:
                         raise ResourceLockedError("Required resource <%s> locked while running %s" % ([name for name in globals() if globals()[name] is res][0], fn.__name__))

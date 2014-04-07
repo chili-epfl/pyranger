@@ -1,4 +1,6 @@
 from threading import Lock
+import time
+
 class Resource:
     def __init__(self, name = ""):
         self.lock = Lock()
@@ -38,7 +40,16 @@ class Resource:
         # here, the exception, if any, is automatically propagated
 
     def acquire(self, wait = True):
-        self.lock.acquire(wait)
+
+        if not wait:
+            return self.lock.acquire(False)
+        else:
+            # we need an active wait to make sure we can properly cancel the actions
+            # that are waiting for the resource
+            while True:
+                if self.lock.acquire(False):
+                    return True
+                time.sleep(0.1)
 
     def release(self):
         self.lock.release()
