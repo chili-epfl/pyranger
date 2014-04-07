@@ -1,9 +1,11 @@
 #! /usr/bin/env python
 
-import logging;
+import logging
+from ranger.helpers.ansistrm import ColorizingStreamHandler
 toplogger = logging.getLogger("ranger")
 toplogger.setLevel(logging.INFO)
-console = logging.StreamHandler()
+#console = logging.StreamHandler()
+console = ColorizingStreamHandler()
 console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
 console.setFormatter(formatter)
