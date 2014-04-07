@@ -52,18 +52,17 @@ class PausableThread(threading.Thread):
         if threading._trace_hook is not None:
             self.debugger_trace = threading._trace_hook
             #logger.warning("Tracing function already registered (debugger?). Task cancellation/pause won't be available.")
+        else:
+            self.debugger_trace = None
         #else:
         self.__cancel = False
         self.__pause = False
-        sys.settrace(self.__trace)
+        sys.settrace(self.__signal_emitter)
 
         self.name = "Ranger action thread (initialization)"
         super(PausableThread, self)._Thread__bootstrap()
 
-    def __trace(self, frame, event, arg):
-        if self.debugger_trace:
-            self.debugger_trace(frame, event, arg)
-
+    def __signal_emitter(self, frame, event, arg):
         if self.__cancel:
             self.__cancel = False
             logger.debug("Cancelling thread <%s>" % self.name)
@@ -72,7 +71,11 @@ class PausableThread(threading.Thread):
             self.__pause = False
             logger.debug("Pausing thread <%s>" % self.name)
             raise ActionPaused()
-        return self.__trace
+
+        if self.debugger_trace:
+            return self.debugger_trace
+        else:
+            return self.__signal_emitter
 
 class _RobotWorkItem(object):
     def __init__(self, future, fn, args, kwargs):
