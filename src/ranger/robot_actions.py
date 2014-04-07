@@ -178,11 +178,6 @@ class RobotActionExecutor():
 
 
     def submit(self, fn, *args, **kwargs):
-        
-        if len(self.futures) > MAX_FUTURES:
-            self.cancel_all()
-            raise RuntimeError("You have more than %s actions running in parallel! Likely a bug in your application logic! Stopping now." % MAX_FUTURES)
-
         name = fn.__name__
         if args and not kwargs:
             name += "(%s)" % ", ".join([str(a) for a in args[1:]]) # start at 1 because 0 is the robot instance
@@ -191,6 +186,11 @@ class RobotActionExecutor():
         elif args and kwargs:
             name += "(%s, " % ", ".join([str(a) for a in args[1:]])
             name += "%s)" % ", ".join(["%s=%s" % (str(k), str(v)) for k, v in kwargs.items()])
+
+        if len(self.futures) > MAX_FUTURES:
+            logger.error("You have more than %s actions running in parallel! Likely a bug in your application logic! I skip action <%s>." % (MAX_FUTURES, name))
+            return
+
 
         f = RobotAction(name)
 
