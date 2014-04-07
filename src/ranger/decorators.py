@@ -60,7 +60,6 @@ def action(fn):
         immediate = False
         if hasattr(args[0], "immediate"): # if args[0] has a 'immediate' member, it's probably the lowlevel robot instance
             immediate = args[0].immediate
-            my_action_id = args[0].action_id.id
         else:
             raise Exception("No robot instance passed to the action!")
 
@@ -90,11 +89,11 @@ def action(fn):
             if introspection:
 
                 introspection.action_started(fn.__name__, 
-                                            str(future.id),
-                                            str(my_action_id), #id of the current action
+                                            str("FUTURE ID BROKEN"),
+                                            str("ACTION ID BROKEN TDB"), #id of the current action
                                             args[1:],
                                             kwargs)
-                future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, str(future.id)))
+                future.add_done_callback(lambda x : introspection.action_completed(fn.__name__, str("future.id BROKEN")))
 
             return future
 

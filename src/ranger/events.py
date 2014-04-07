@@ -98,29 +98,25 @@ class EventMonitor:
     def do(self, cb):
 
         if introspection:
-            introspection.action_subscribe_event(self.robot.action_id.id, str(self))
+            introspection.action_subscribe_event("BROKEN TDB", str(self))
 
         # first add callback? start a thread to monitor the event!
         if not self.thread:
             self.monitoring = True
-            self.thread = PausableThread(target=self._monitor, args=[self.robot.action_id.id])
+            self.thread = PausableThread(target=self._monitor)
             self.thread.start()
             self.thread.name = "Event monitor on %s" % self
 
         self.cbs.append(cb)
         return self # to allow for chaining
 
-    def _monitor(self, owner):
-        
-        # we are in a new thread, and we may execute several actions from there:
-        # we need to carry on the action ID
-        self.robot.action_id.id = owner
+    def _monitor(self):
 
         while self.monitoring:
             self._wait_for_condition()
 
             if introspection:
-                introspection.action_event_fired(owner, str(self))
+                introspection.action_event_fired("BROKEN TDB", str(self))
 
             for cb in self.cbs:
                 cb()
@@ -176,14 +172,14 @@ class EventMonitor:
         """
 
         if introspection:
-            introspection.action_waiting(self.robot.action_id.id, str(self))
+            introspection.action_waiting("BROKEN TDB", str(self))
 
 
         self._wait_for_condition(timeout)
 
 
         if introspection:
-            introspection.action_waiting_over(self.robot.action_id.id)
+            introspection.action_waiting_over("BROKEN TDB")
 
     def __str__(self):
         return "condition <%s %s %s>"% (self.var, self.mode, self.target)

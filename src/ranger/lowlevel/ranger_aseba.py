@@ -46,7 +46,7 @@ def clamp(v, vmin, vmax):
 def _element_clip(list_i, min_val, max_val):
     return [clamp(i, min_val, max_val) for i in list_i]
 
-executor = RobotActionExecutor(max_workers = 10) # at most 10 tasks in parallel
+executor = RobotActionExecutor()
 
 Eyelids = enum("OPEN", "HALFOPEN", "CLOSED", "UNDEFINED") #undefined can occur if the 2 eyes have different lid position
 
@@ -97,9 +97,6 @@ class _RangerLowLevel():
 
         # creates accessors for each of the fields in STATE
         self._init_accessors()
-
-        self.action_id = threading.local() # current action ID
-        self.action_id.id = str(0) # initially 0 (the main task)
 
         self.events = Events(self)
         # make the 'Events.on(...)' method available at robot level
