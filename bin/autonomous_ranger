@@ -25,6 +25,6 @@ if __name__ == "__main__":
         robot.wait("lolette", value = False)
         logger.info("Ok! Let's start!")
         robot.sneak_in()
-        face = robot.face_beacon(ID["MYSTATION"])
+        face = robot.face(ID["MYSTATION"])
         robot.wait("ir_center", below = 0.3)
         robot.speed(0)

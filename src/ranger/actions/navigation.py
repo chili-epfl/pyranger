@@ -21,7 +21,10 @@ def dock_for_charging(robot):
 
 @action
 def look_for_beacon(robot, beacon_id):
-    
+
+    # beacon_id looks loke "beacon_1". Split it.
+    beacon_id = int(beacon_id.split("_")[1])
+
     def isseen():
         if beacon_id in robot.beacons and \
             not robot.beacons[beacon_id].obsolete():
@@ -35,15 +38,24 @@ def look_for_beacon(robot, beacon_id):
     try:
         sneakin = robot.sneak_in()
 
+        turning = robot.turn(-math.pi / 4)
+        turning.wait()
+
         for i in range(3):
-            turning = robot.turn(math.pi / 4)
+            turning = robot.turn(math.pi / 2)
             turning.wait()
             if isseen(): break
-            turning = robot.turn(-math.pi / 4)
+            turning = robot.turn(-math.pi / 2)
             turning.wait()
             if isseen(): break
 
+
+        turning = robot.turn(-math.pi / 4)
+
         sneakin.cancel()
+
+        turning.wait()
+
 
         if isseen():
             logger.info("Beacon %s seen." % beacon_id)
