@@ -24,6 +24,8 @@ import weakref
 import threading 
 import thread # for get_ident
 
+import traceback
+
 from ranger.signals import ActionCancelled, ActionPaused
 
 # this dictionary keep track of which thread runs which action.
@@ -65,7 +67,8 @@ class PausableThread(threading.Thread):
     def __signal_emitter(self, frame, event, arg):
         if self.__cancel:
             self.__cancel = False
-            logger.debug("Cancelling thread <%s>" % self.name)
+            logger.debug("Cancelling thread <%s>:" % self.name)
+            logger.debug("".join(traceback.format_stack(frame, limit = 3)))
             raise ActionCancelled()
         if self.__pause:
             self.__pause = False
