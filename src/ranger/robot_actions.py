@@ -240,5 +240,10 @@ class RobotActionExecutor(ThreadPoolExecutor):
     def cancel_all(self):
         """ Blocks until all the currently running actions are actually stopped.
         """
+
+        # clear the actions that may be in-queue
+        with self._work_queue.mutex:
+            self._work_queue.queue.clear()
+
         for f in self.futures:
             f.cancel()

@@ -21,6 +21,16 @@ class Events:
         return monitor
 
     def close(self):
+
+        # first, we tell *all* monitors not to trigger any events anymore
+        # then we actually stop the monitor by interupting the callbacks
+        # they may be processing.
+
+        for m in self.eventmonitors:
+            monitor = m() # weakref!
+            if monitor:
+                monitor.stop_monitoring()
+
         for m in self.eventmonitors:
             monitor = m() # weakref!
             if monitor:
@@ -117,9 +127,11 @@ class EventMonitor:
             if self.oneshot:
                 return
 
-    def close(self):
+    def stop_monitoring(self):
         self.monitoring = False
-        if self.thread and self.thread.is_alive:
+
+    def close(self):
+         if self.thread and self.thread.is_alive:
             self.thread.cancel()
             self.thread.join()
 
