@@ -119,7 +119,7 @@ class EventMonitor:
 
     def close(self):
         self.monitoring = False
-        if self.thread:
+        if self.thread and self.thread.is_alive:
             self.thread.cancel()
             self.thread.join()
 

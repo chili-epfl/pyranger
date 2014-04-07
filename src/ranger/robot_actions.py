@@ -130,7 +130,16 @@ class RobotAction(Future):
 
     def result(self):
         threading.current_thread().name = "Action waiting for sub-action %s" % self.actionname
-        return super(RobotAction, self).result()
+
+
+        # active wait! Instead of blocking on the condition variable in super.result()
+        # we do an active wait to make sure we can cancel/suspend the action via our
+        # __signal_emitter trace function
+        while True:
+            try:
+                return super(RobotAction, self).result(0.1)
+            except TimeoutError:
+                pass
 
     def wait(self):
         """ alias for result()
