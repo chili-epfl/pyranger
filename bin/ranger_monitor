@@ -9,7 +9,8 @@ import sys
 import time
 import math
 
-from ranger.lowlevel.ranger_aseba import get_robot, BATTERY_LOW_THRESHOLD, ID
+from ranger.lowlevel.ranger_aseba import get_robot, BATTERY_LOW_THRESHOLD
+from ranger.res import ID
 from ranger.helpers.plot import XYPlot
 
 from consoletk import ConsoleTK
