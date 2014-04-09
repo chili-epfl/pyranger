@@ -175,7 +175,7 @@ class _RangerLowLevel():
                    l_upper_lid = 100, l_lower_lid = None, r_upper_lid = None, r_lower_lid = None):
 
         if rx is None:
-            rx = -lx # negative because positive values converge toward center
+            rx = lx
         if ry is None:
             ry = ly
         if l_lower_lid is None:
@@ -202,11 +202,14 @@ class _RangerLowLevel():
                self.state["eyelids"] = Eyelids.CLOSED
         else:
                self.state["eyelids"] = Eyelids.UNDEFINED
- 
-        self._send_evt("neuilEvent", lx, ly,
-                                     rx, ry,
-                                     l_upper_lid, l_lower_lid,
-                                     r_upper_lid, r_lower_lid)
+
+        self._send_evt("EyeCartesianSet", 0, rx, ry)
+        self._send_evt("EyeCartesianSet", 1, lx, ly)
+
+        self._send_evt("openEyelid", 0, r_upper_lid)
+        self._send_evt("openEyelid", 1, r_lower_lid)
+        self._send_evt("openEyelid", 2, l_upper_lid)
+        self._send_evt("openEyelid", 3, l_lower_lid)
 
     def led_pattern(self, pattern_id, repeat = False):
         self._send_evt("playLedVid", pattern_id, repeat)
@@ -455,7 +458,7 @@ class Beacon:
         self.update = time.time()
         self.id = id
 
-        self.theta = - math.pi * data[0] / 1800. + 2 * math.pi
+        self.theta = - math.pi * data[2] / 1800. + 2 * math.pi
 
         # angle at which the beacon is seen by the robot's RaB
         self.orientation = math.atan2(math.sin(math.pi * angle / 1800.),

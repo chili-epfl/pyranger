@@ -7,11 +7,17 @@ PATTERNS = dict(toy_in = 0,
                 toy_out = 1)
 
 # Range and Bearing IDs
-ID = dict(BEACON = "beacon_0",
-          ROBOT1 = "beacon_1",
-          ROBOT2 = "beacon_2",
-          STATION1 = "beacon_4",
-          STATION2 = "beacon_5")
+ID = dict(BEACON = "beacon_20",
+          ROBOT1 = "beacon_10",
+          ROBOT2 = "beacon_11",
+          ROBOT3 = "beacon_12",
+          ROBOT4 = "beacon_13",
+          ROBOT5 = "beacon_14",
+          STATION1 = "beacon_15",
+          STATION2 = "beacon_16",
+          STATION3 = "beacon_17",
+          STATION4 = "beacon_18",
+          STATION5 = "beacon_19")
 
 ID["MYSTATION"] = ID["STATION1"] # TODO multirobot
 
