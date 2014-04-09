@@ -1,6 +1,14 @@
 pyranger -- Python interface for high-level control of the Ranger box
 =====================================================================
 
+Main features
+-------------
+
+- Robot actions non-blocking by default: the are instanciated as futures (lightweight threads)
+- Poses are managed explicitely and can easily be transformed from one reference frame to another one.
+
+
+
 Introspection
 -------------
 
