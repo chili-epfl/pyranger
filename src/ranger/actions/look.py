@@ -2,9 +2,9 @@ import logging; logger = logging.getLogger("ranger.look")
 import time
 import math
 from random import uniform as rand
-from ranger.decorators import action, lock
-from ranger.resources import *
-from ranger.signals import ActionCancelled
+from robots.decorators import action, lock
+from robots.signals import ActionCancelled
+from ranger.res import *
 
 from ranger.lowlevel.ranger_aseba import Eyelids
 

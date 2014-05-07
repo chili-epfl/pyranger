@@ -1,6 +1,6 @@
 import logging; logger = logging.getLogger("ranger.light")
-from ranger.decorators import action, lock
-from ranger.resources import *
+from robots.decorators import action, lock
+from ranger.res import *
 
 @action
 @lock(LEDS)

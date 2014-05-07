@@ -1,7 +1,7 @@
 import logging; logger = logging.getLogger("ranger.sound")
-from ranger.decorators import action, lock
-from ranger.resources import *
-from ranger.signals import ActionCancelled
+from robots.decorators import action, lock
+from robots.signals import ActionCancelled
+from ranger.res import *
 
 from playwave import WavePlayer
 

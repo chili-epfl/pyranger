@@ -2,9 +2,9 @@ import logging; logger = logging.getLogger("ranger.navigation")
 
 import time, math
 from random import uniform as rand
-from ranger.decorators import action, lock
-from ranger.resources import *
-from ranger.signals import ActionCancelled
+from robots.decorators import action, lock
+from robots.signals import ActionCancelled
+from ranger.res import *
 
 EPSILON_RAD = 0.05
 
@@ -181,7 +181,7 @@ def goto(robot,
                 robot.speed(v = v if not backwards else -v)
 
 
-            if robot.bumper:
+            if robot.state.bumper:
                 logger.warning("Bumped into something!")
                 robot.speed(0)
                 with WHEELS:
@@ -215,7 +215,7 @@ def resolve_collision(robot):
 
     #TODO: EMOTION
     logger.info("Trying to resolve the collision...")
-    ir_dist = robot.ir_center
+    ir_dist = robot.state.ir_center
     if ir_dist < DISTANCE_TO_OBSTACLE_THRESHOLD:
         obstacle_seen = True
         logger.info("Obstacle seen at %s" % ir_dist)
@@ -228,7 +228,7 @@ def resolve_collision(robot):
         start = time.time()
         while (time.time() - start) < WAIT_FOR_REMOVAL_DURATION:
             #TODO: EMOTION -> hope obstacle removed
-            if robot.ir_center > DISTANCE_TO_OBSTACLE_THRESHOLD:
+            if robot.state.ir_center > DISTANCE_TO_OBSTACLE_THRESHOLD:
                 logger.info("Obstacle removed!")
                 #consider us as free again! youpi!
                 #TODO: EMOTION
@@ -237,7 +237,7 @@ def resolve_collision(robot):
 
     robot.move(-0.2).result() # backwards 20 cm
 
-    if robot.ir_left < robot.ir_right:
+    if robot.state.ir_left < robot.state.ir_right:
         #go right!
         robot.goto(x = 0, y = -1).result()
         robot.turn(math.pi).result()

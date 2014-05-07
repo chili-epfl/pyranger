@@ -1,18 +1,32 @@
-import logging; logger = logging.getLogger("ranger.lowlevel")
+import logging
+from robots.helpers.ansistrm import ColorizingStreamHandler
+
+logger = logging.getLogger("ranger")
+logger.setLevel(logging.INFO)
+
+console = ColorizingStreamHandler()
+console.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
+console.setFormatter(formatter)
+logger.addHandler(console)
+
+
 
 import math, time
-import pkgutil, sys
-import threading
-from functools import partial
+
+import threading # for threading.Condition
+
+from robots import GenericRobot
+robotlogger = logging.getLogger("robots")
+robotlogger.addHandler(console)
+
+from robots.helpers.helpers import enum
+from robots.introspection import introspection
 
 from aseba import Aseba
-from ranger.helpers.helpers import valuefilter, enum
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
-from ranger.helpers.position import PoseManager
-from ranger.introspection import introspection
-from ranger.events import Events
-from ranger.robot_actions import RobotActionExecutor
+from ranger.helpers.position import RangerPoseManager
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
@@ -20,37 +34,12 @@ RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
 
 BATTERY_LOW_THRESHOLD = 7200 #mV
 
-_robot = None
-def get_robot(dummy = False, immediate = False):
-    """ Use this function to retrieve the (singleton) low-level
-    robot accessor.
-
-    :param immediate: (default: False) in immediate mode, robot's action are not
-    asynchronous. Useful for debugging for instance.
-    """
-    global _robot
-    if not _robot:
-        _robot = _RangerLowLevel(dummy, immediate)
-    return _robot
-
-
-def _element_mul(list1, list2):
-    return [ i * j for i, j in zip(list1, list2)] 
-
-def _element_add(list1, list2):
-    return [ i + j for i, j in zip(list1, list2)] 
-
-def clamp(v, vmin, vmax):
-    return max(vmin, min(vmax, v))
-
-def _element_clip(list_i, min_val, max_val):
-    return [clamp(i, min_val, max_val) for i in list_i]
-
-executor = RobotActionExecutor()
+def clamp(val, vmin, vmax):
+    return max(vmin, min(vmax, val))
 
 Eyelids = enum("OPEN", "HALFOPEN", "CLOSED", "UNDEFINED") #undefined can occur if the 2 eyes have different lid position
 
-class _RangerLowLevel():
+class Ranger(GenericRobot):
 
     STATE = {
         # name of the field,    default?
@@ -85,22 +74,18 @@ class _RangerLowLevel():
 
     def __init__(self, dummy = False, immediate = False):
 
-        self.dummy = dummy
-        self.immediate = immediate
+        super(Ranger, self).__init__(actions = ["ranger.actions"], 
+                                    dummy = dummy,
+                                    immediate = immediate)
 
-        self.state = {}
-        self.filteredvalues = {} # holds the filters for sensors that need filtering (like scale, IR sensors...)
+
         self.beacons = {}
         self.odom = Odom()
 
-        self.pose = PoseManager(self)
+        self.pose = RangerPoseManager(self)
 
         # creates accessors for each of the fields in STATE
-        self._init_accessors()
-
-        self.events = Events(self)
-        # make the 'Events.on(...)' method available at robot level
-        self.on = self.events.on
+        self.state.update(Ranger.STATE)
 
         #######################################################################
         #                       ASEBA initialization
@@ -147,22 +132,6 @@ class _RangerLowLevel():
         #######################################################################
         #                   End of ASEBA initialization
         #######################################################################
-
-
-        # Import all modules under robots/actions/
-        import ranger.actions
-        path = sys.modules['ranger.actions'].__path__
-        for loader, module_name, is_pkg in  pkgutil.walk_packages(path):
-            __import__('ranger.actions.' + module_name)
-
-        # Dynamically add available actions (ie, actions defined with @action in
-        # actions/* submodules.
-        for action in self.available_actions():
-            setattr(self, action.__name__, partial(action, self))
-            logger.info("Added " + action.__name__ + " as available action.")
-
-        if introspection:
-            introspection.ping()
 
     def lefteye(self, x, y):
         self.eyes(lx=x, ly=y, rx=0, ry=0)
@@ -261,15 +230,6 @@ class _RangerLowLevel():
 
             if wait_duration > MAX_WAIT:
                 raise Exception("The robot does not transmit its state!! Check the connection to the aseba network.")
-
-    def wait(self, var, **kwargs):
-        """ Alias to wait on a given condition. Cf EventMonitor for details on
-        the acceptable conditions.
-        """
-        self.on(var, **kwargs).wait()
-
-    def cancel_all(self):
-        executor.cancel_all()
 
     def _process_main_feedback(self, msg, with_encoders = True):
         if introspection:
@@ -372,61 +332,6 @@ class _RangerLowLevel():
         else:
             logger.debug("Event %s(%s) sent." % (id, str(args)))
         self.aseba.send_event(id, args)
-
-    def _add_property(self, name, default):
-
-        def getter(self):
-            if name in self.state:
-                return self.state[name]
-            else:
-                return None
-
-        setattr(self.__class__,name, property(getter))
-
-        if default is not None:
-            self.state[name] = default
-
-
-    def _init_accessors(self):
-
-        for name, default in self.STATE.items():
-            # the creation of the setters,getters must take place in a separate
-            # function, else they all refer to the same field name... Python internals...
-            self._add_property(name, default)
-
-    def filtered(self, name, val):
-        """ Helper to easily filter values (uses an accumulator to average a given 'name' quantity)
-        """
-
-        filter = self.filteredvalues.setdefault(name, valuefilter())
-        filter.append(val)
-        return filter.get()
-
-    def available_actions(self):
-        """ Iterate over all loaded modules, and retrieve actions (ie functions
-        with the @action decorator).
-        """
-        actions = []
-        path = sys.modules["ranger.actions"].__path__
-        for loader, module_name, is_pkg in  pkgutil.walk_packages(path):
-            m = sys.modules["ranger.actions." + module_name]
-            for member in [getattr(m, fn) for fn in dir(m)]:
-                if hasattr(member, "_action"):
-                    actions.append(member)
-
-        return actions
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.close()
-
-    def close(self):
-        self.events.close()
-        self.aseba.close()
-        self.aseba_thread.join()
-
 
 class Beacon:
     """

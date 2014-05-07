@@ -1,2 +1,2 @@
-from .lowlevel.ranger_aseba import get_robot
+from .lowlevel.ranger_aseba import Ranger
 
