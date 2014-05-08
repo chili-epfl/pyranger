@@ -96,7 +96,7 @@ def move(robot, distance, v = 0.1):
     """
     initial_pose = robot.pose.myself()
     #TODO: ease in/ease out
-    robot.speed(v if distance > 0 else -v)
+    robot.speed(v=v if distance > 0 else -v)
 
     try:
         while robot.pose.distance(initial_pose) < abs(distance):
