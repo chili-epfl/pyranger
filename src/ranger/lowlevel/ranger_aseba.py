@@ -264,7 +264,7 @@ class Ranger(GenericRobot):
             if r is None:
                 r = l
             elif l is None:
-                l = -r
+                l = r
         else:
             logger.warning("setSpeed called with no speed!")
             return
