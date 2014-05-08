@@ -88,6 +88,13 @@ class Monitor:
         self.out.relmoveto(0,1)
         self.out.absolutebar(state.velocity_right, 100, "%", label = "Right wheel", minvalue = -100)
 
+        self.out.moveto(48,2)
+        self.out.vseparator(2)
+        self.out.moveto(50,2)
+        self.out.label("Robot odometry:")
+        self.out.relmoveto(0,1)
+        self.out.label("x:%.2fm, y:%.2fm, θ:%.1f°" % (state.x, state.y, 180. / math.pi * state.theta))
+
         ###################################################
         ### Beacons
         ###################################################
@@ -102,10 +109,11 @@ class Monitor:
                 self.out.relmoveto(0,1)
                 self.out.label("Beacon %s detected" % beacon.id)
                 self.out.relmoveto(0,1)
-                self.out.label("(r, θ): (%.2fm, %.1f°), Base: %.1f°" % \
+                self.out.label("(r, θ): (%.2fm, %.1f°) -> (x:%.2fm, y:%.2fm, θr:%.1f°), Base seen at: %.1f°" % \
                                     (beacon.r, 
                                      180./math.pi * beacon.theta,
-                                     180./math.pi * beacon.orientation), fg="base0")
+                                     beacon.robot_x, beacon.robot_y, 180./math.pi * beacon.robot_theta,
+                                     180./math.pi * beacon.phi), fg="base0")
             else:
                 # clear!
                 self.out.clear(29, 9)
@@ -231,7 +239,7 @@ class Monitor:
                     self.showstatus()
 
                 if self.showtraj:
-                    trajplot.add(self.robot.state.y, self.robot.state.x, self.robot.state.theta)
+                    trajplot.add(self.robot.state.x, self.robot.state.y, self.robot.state.theta)
 
 
                 now = time.time()

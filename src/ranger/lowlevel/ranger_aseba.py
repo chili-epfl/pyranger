@@ -335,22 +335,21 @@ class Ranger(GenericRobot):
 
 class Beacon:
     """
-                               ^
-                               |
-                               |     /
-                              /|.   /
-                             / | `+.
-                     Robot  /  |.'  `.
+
+                                     /ry
+                              /`.   /
+                             /   `+.
+                     Robot  /   .'  `.
                            /   /    /
                           `-..-'`. /
-                          .-'`.   `.
-                   r  _.-'     `-/  `.
-                   .-'
-    Beacon      .-'
-    ,---.    .-'--.
-   /     _.-'      | theta
+      ^ by                .-'`.   `.
+      |            r  _.-' \   `-/ /`.rx
+      |            .-'      `-___-'
+      |Beacon   .-'            phi
+    ,-|-.    .-'--.
+   /  |  _.-'      | theta
   (   ............,.........>
-   \     /
+   \     /                  bx
     `---'
 
     """
@@ -366,14 +365,21 @@ class Beacon:
         self.theta = - math.pi * data[2] / 1800. + 2 * math.pi
 
         # angle at which the beacon is seen by the robot's RaB
-        self.orientation = math.atan2(math.sin(math.pi * angle / 1800.),
-                                      math.cos(math.pi * angle / 1800.))
+        self.phi = math.atan2(math.sin(math.pi * angle / 1800.),
+                              math.cos(math.pi * angle / 1800.))
 
         self.r = data[1] / 1000.  # in meters
 
         # beacon cartesian coordinates, *relative to the robot frame!*
-        self.x = math.cos(self.orientation) * self.r
-        self.y = math.sin(self.orientation) * self.r
+        self.x = math.cos(self.phi) * self.r
+        self.y = math.sin(self.phi) * self.r
+
+        # robot cartesian coordinates, *relative to the beacon frame!*
+        self.robot_x = math.cos(self.theta) * self.r
+        self.robot_y = math.sin(self.theta) * self.r
+        # orientation of the robot, in the beacon frame
+        self.robot_theta = math.pi - (self.theta + self.phi)
+
 
     def obsolete(self):
         if time.time() - self.update > self.OBSOLETE_AFTER:
