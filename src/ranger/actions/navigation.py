@@ -107,6 +107,14 @@ def move(robot, distance, v = 0.1):
     finally:
         robot.speed(0)
 
+def eased_speed(max_speed, achieved):
+    #TODO: proper ease in/ease out
+    if achieved > 0.8:
+        return max_speed * 0.5
+    else:
+        return max_speed
+
+
 @action
 @lock(WHEELS)
 def turn(robot, angle, w = 0.5):
@@ -117,13 +125,26 @@ def turn(robot, angle, w = 0.5):
     :param angle: angle to turn, in radians
     :param w: (default: 0.5) rotation velocity
     """
-    initial_pose = robot.pose.myself()
-    #TODO: ease in/ease out
-    robot.speed(w = w if angle > 0 else -w)
+    theta0 = robot.state.theta
+
+    # if the angle is small, it's useless to turn too quickly
+    max_speed = max(0.1, min(abs(angle), abs(w)))
+
+    def hasachieved():
+        return abs(robot.state.theta - theta0) / abs(angle)
 
     try:
-        while abs(robot.pose.pantilt(initial_pose)[0]) < abs(angle):
+        while True:
+            achieved = hasachieved()
+            if achieved > 0.95:
+                return
+
+            speed = eased_speed(max_speed, achieved)
+
+            robot.speed(w = speed if angle > 0 else -speed)
+
             time.sleep(0.1)
+
     except ActionCancelled:
         pass
     finally:
