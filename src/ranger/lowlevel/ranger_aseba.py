@@ -117,10 +117,9 @@ class Ranger(GenericRobot):
 
         # Condition variable that can be used to wait
         # until the next update of a given Aseba node
-        self.main_update = threading.Condition()
-        self.neuil_update = threading.Condition()
-        self.rab_update = threading.Condition()
-        self.update = threading.Condition() # get notified when any node is updated
+        self.main_update = threading.Event()
+        self.neuil_update = threading.Event()
+        self.rab_update = threading.Event()
 
         # Starts DBus thread (responsible for receiving events)
         self.aseba_thread = threading.Thread(target=self.aseba.run)
@@ -281,15 +280,22 @@ class Ranger(GenericRobot):
         """
         MAX_WAIT = 2 # seconds
 
-        wait_duration = 0.
+        if self.main_update.wait(MAX_WAIT) is None:
+            raise Exception("'main' node does not transmit its state!! Check the connection to the aseba network.")
 
-        while "accelerometer" not in self.state or \
-              "lolette" not in self.state:
-            time.sleep(0.1)
-            wait_duration += 0.1
+        if self.neuil_update.wait(MAX_WAIT) is None:
+            raise Exception("'neuil' node does not transmit its state!! Check the connection to the aseba network.")
 
-            if wait_duration > MAX_WAIT:
-                raise Exception("The robot does not transmit its state!! Check the connection to the aseba network.")
+        if self.rab_update.wait(MAX_WAIT) is None:
+            logger.warning("I did not see any beacons during initialization! I can not set my absolute location.")
+        else:
+            if MYSTATION not in self.beacons:
+                logger.warning("I did not see the charging station during initialization! I can not set my absolute location.")
+            else:
+                self.odom.reset(self.beacons[MYSTATION].robot_x,
+                                self.beacons[MYSTATION].robot_y)
+                                # do not set theta for now, too unreliable -> this means that the robot *must* be
+                                # initially oriented like the base station.
 
     def _process_main_feedback(self, msg, with_encoders = True):
         if introspection:
@@ -329,12 +335,9 @@ class Ranger(GenericRobot):
 
         self.state["freq_main"] = self.aseba.events_freq["mainFeedbackWithEncoders"]
 
-        self.update.acquire()
-        self.main_update.acquire()
-        self.update.notifyAll()
-        self.main_update.notifyAll()
-        self.update.release()
-        self.main_update.release()
+        # notify the update
+        self.main_update.set()
+        self.main_update.clear()
 
     def _process_neuil_feedback(self, msg):
 
@@ -347,12 +350,9 @@ class Ranger(GenericRobot):
 
         self.state["freq_neuil"] = self.aseba.events_freq["neuilFeedback"]
 
-        self.update.acquire()
-        self.neuil_update.acquire()
-        self.update.notifyAll()
-        self.neuil_update.notifyAll()
-        self.update.release()
-        self.neuil_update.release()
+        # notify the update
+        self.neuil_update.set()
+        self.neuil_update.clear()
 
 
     def _process_rab_feedback(self, msg):
@@ -376,12 +376,9 @@ class Ranger(GenericRobot):
 
             self.state["freq_rab"] = self.aseba.events_freq["receiverFeedback"]
 
-            self.update.acquire()
-            self.rab_update.acquire()
-            self.update.notifyAll()
-            self.rab_update.notifyAll()
-            self.update.release()
-            self.rab_update.release()
+            # notify the update
+            self.rab_update.set()
+            self.rab_update.clear()
 
 
     def _send_evt(self, id, *args, **kwargs):
