@@ -37,9 +37,13 @@ BATTERY_LOW_THRESHOLD = 7200 #mV
 def clamp(val, vmin, vmax):
     return max(vmin, min(vmax, val))
 
-Eyelids = enum("OPEN", "HALFOPEN", "CLOSED", "UNDEFINED") #undefined can occur if the 2 eyes have different lid position
-
 class Ranger(GenericRobot):
+
+    eyelids = enum(OPEN=(100,100), 
+                HALFOPEN = (50, 50), 
+                CLOSED = (0,0), 
+                UNDEFINED = None) #undefined can occur if the 2 eyes have different lid position
+
 
     STATE = {
         # name of the field,    default?
@@ -69,7 +73,7 @@ class Ranger(GenericRobot):
         "theta":                0.0,  # orientation of the robot, computed from odometry
         "v":                    0.0,  # linear velocity, in robot's forward direction
         "w":                    0.0,   # rotation velocity
-        "eyelids":              Eyelids.UNDEFINED   # state of the eyelids (open, half-open or closed)
+        "eyelids":              None   # state of the eyelids (open, half-open or closed)
         }
 
     def __init__(self, dummy = False, immediate = False):
@@ -134,51 +138,106 @@ class Ranger(GenericRobot):
         #######################################################################
 
     def lefteye(self, x, y):
-        self.eyes(lx=x, ly=y, rx=0, ry=0)
+        """
+        Move the pupil of the left eye
+
+        :param x: horizontal position of the pupil, from -100 (left) to 100 (right)
+        :param y: vertical position of the pupil, from -100 (bottom) to 100 (top)
+        """
+        self._send_evt("EyeCartesianSet", 1, -x, y)
 
     def righteye(self, x, y):
-        self.eyes(lx=0, ly=0, rx=x, ry=y)
+        """
+        Move the pupil of the right eye
 
-    def eyes(self, lx, ly, 
-                   rx = None, ry = None, 
-                   l_upper_lid = 100, l_lower_lid = None, r_upper_lid = None, r_lower_lid = None):
+        :param x: horizontal position of the pupil, from -100 (left) to 100 (right)
+        :param y: vertical position of the pupil, from -100 (bottom) to 100 (top)
+        """
+        self._send_evt("EyeCartesianSet", 0, -x, y)
 
-        if rx is None:
-            rx = lx
-        if ry is None:
-            ry = ly
-        if l_lower_lid is None:
-            l_lower_lid = l_upper_lid
-        if r_upper_lid is None:
-            r_upper_lid = l_upper_lid
-        if r_lower_lid is None:
-            r_lower_lid = l_lower_lid
+    def leftlid(self, pos):
+        """
+        Open/close the left eyelid
 
-        if l_upper_lid > 60 and \
-           l_lower_lid > 60 and \
-           r_upper_lid > 60 and \
-           r_lower_lid > 60:
-               self.state["eyelids"] = Eyelids.OPEN
-        elif l_upper_lid < 60 and l_upper_lid > 10 and \
-             l_lower_lid < 60 and l_lower_lid > 10 and \
-             r_upper_lid < 60 and r_upper_lid > 10 and \
-             r_lower_lid < 60 and r_lower_lid > 10:
-               self.state["eyelids"] = Eyelids.HALFOPEN
-        elif l_upper_lid == 0 and \
-             l_lower_lid == 0 and \
-             r_upper_lid == 0 and \
-             r_lower_lid == 0:
-               self.state["eyelids"] = Eyelids.CLOSED
+        :param pos: position of lid, as a tuple (upper_lid, lower_lid) (values
+        from 0 to 100, or None to keep the lid part in place)
+        """
+        if pos:
+            upper, lower = pos
+
+            if upper is not None: # may be 0!
+                self._send_evt("openEyelid", 2, upper)
+            if lower is not None: # may be 0!
+                self._send_evt("openEyelid", 3, lower)
+
+
+    def rightlid(self, pos):
+        """
+        Open/close the right eyelid
+
+        :param pos: position of lid, as a tuple (upper_lid, lower_lid) (values
+        from 0 to 100, or None to keep the lid part in place)
+        """
+        if pos:
+            upper, lower = pos
+
+            if upper is not None: # may be 0!
+                self._send_evt("openEyelid", 0, upper)
+            if lower is not None: # may be 0!
+                self._send_evt("openEyelid", 1, lower)
+
+
+    def eyes(self, eyes = None,
+                   lids = None,
+                   left = None, 
+                   right = None,
+                   left_lid = None,
+                   right_lid = None):
+
+        if eyes:
+            x, y = eyes
+            self.righteye(x, y)
+            self.lefteye(x, y)
         else:
-               self.state["eyelids"] = Eyelids.UNDEFINED
+            if right:
+                x, y = right
+                self.righteye(x, y)
 
-        self._send_evt("EyeCartesianSet", 0, rx, ry)
-        self._send_evt("EyeCartesianSet", 1, lx, ly)
+            if left:
+                x, y = left
+                self.lefteye(x, y)
 
-        self._send_evt("openEyelid", 0, r_upper_lid)
-        self._send_evt("openEyelid", 1, r_lower_lid)
-        self._send_evt("openEyelid", 2, l_upper_lid)
-        self._send_evt("openEyelid", 3, l_lower_lid)
+        if lids:
+            self.leftlid(lids)
+            self.rightlid(lids)
+            left_lid = lids
+            right_lid = lids
+        else:
+            self.leftlid(left_lid)
+            self.rightlid(right_lid)
+
+        if left_lid and right_lid:
+            if left_lid[0] > 60 and \
+            left_lid[1] > 60 and \
+            right_lid[0] > 60 and \
+            right_lid[1] > 60:
+                self.state["eyelids"] = Ranger.eyelids.OPEN
+            elif left_lid[0]  < 60 and left_lid[0]  > 10 and \
+                left_lid[1]  < 60 and left_lid[1]  > 10 and \
+                right_lid[0] < 60 and right_lid[0] > 10 and \
+                right_lid[1] < 60 and right_lid[1] > 10:
+                self.state["eyelids"] = Ranger.eyelids.HALFOPEN
+            elif left_lid[0]  == 0 and \
+                left_lid[1]  == 0 and \
+                right_lid[0] == 0 and \
+                right_lid[1] == 0:
+                self.state["eyelids"] = Ranger.eyelids.CLOSED
+            else:
+                self.state["eyelids"] = Ranger.eyelids.UNDEFINED
+
+        else:
+            self.state["eyelids"] = Ranger.eyelids.UNDEFINED
+
 
     def led_pattern(self, pattern_id, repeat = False):
         self._send_evt("playLedVid", pattern_id, repeat)
