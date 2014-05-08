@@ -27,6 +27,7 @@ from aseba import Aseba
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.helpers.position import RangerPoseManager
+from ranger.res import MYSTATION
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
@@ -362,7 +363,7 @@ class Ranger(GenericRobot):
         msg[3]: angle where the robot is seen, from the beacon R&B perspective (ie, theta polar coord of robot in map)
         msg[4]: distance where the robot is seen, from the beacon R&B perspective (ie, r polar coord of robot in map)
         """
-        id = msg[0]
+        id = int(msg[0]) # convert DBus integers to regular int
 
         distance = msg[2]
         if distance > 0: # may be zero in case of error (somewhere...)

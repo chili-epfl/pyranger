@@ -40,8 +40,8 @@ with get_robot(dummy = True) as robot:
 
         beacon_found = False
         while not beacon_found:
-            beacon_found = robot.look_for_beacon(ID["BEACON"]).result()
-        robot.goto(ID["BEACON"]).wait()
+            beacon_found = robot.look_for_beacon(ID.BEACON).result()
+        robot.goto(ID.BEACON).wait()
         #TODO: set the target orientation
 
     def on_toy_added():

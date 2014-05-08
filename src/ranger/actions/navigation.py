@@ -22,9 +22,6 @@ def dock_for_charging(robot):
 @action
 def look_for_beacon(robot, beacon_id):
 
-    # beacon_id looks loke "beacon_1". Split it.
-    beacon_id = int(beacon_id.split("_")[1])
-
     def isseen():
         if beacon_id in robot.beacons and \
             not robot.beacons[beacon_id].obsolete():
