@@ -27,6 +27,7 @@ from aseba import Aseba
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.helpers.position import RangerPoseManager
+from ranger.helpers.robotrab import OrientationEstimator
 from ranger.res import MYSTATION
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
@@ -360,19 +361,21 @@ class Ranger(GenericRobot):
         msg[0]: beacon ID
         msg[1]: angle where the beacon is seen, from the robot's R&B perspective
         msg[2]: distance
-        msg[3]: angle where the robot is seen, from the beacon R&B perspective (ie, theta polar coord of robot in map)
+        msg[5]: angle where the robot is seen, from the beacon R&B perspective (ie, theta polar coord of robot in map)
         msg[4]: distance where the robot is seen, from the beacon R&B perspective (ie, r polar coord of robot in map)
         """
         id = int(msg[0]) # convert DBus integers to regular int
 
         distance = msg[2]
         if distance > 0: # may be zero in case of error (somewhere...)
-            beacon = Beacon(id = id,
+            if id not in self.beacons:
+                self.beacons[id] = Beacon(id)
+
+            self.beacons[id].update(
                     distance = msg[2],
                     angle = msg[1],
+                    rspeed = self.state.w,
                     data = [msg[3+i] for i in range(7)])
-
-            self.beacons[id] = beacon
 
             self.state["freq_rab"] = self.aseba.events_freq["receiverFeedback"]
 
@@ -414,16 +417,24 @@ class Beacon:
     OBSOLETE_AFTER = 5 #seconds
 
 
-    def __init__(self, id, distance, angle, data):
+    def __init__(self, id):
 
-        self.update = time.time()
+        self.robotrab = OrientationEstimator()
+
+        self.last_update = time.time()
+
         self.id = id
+
+    def update(self, distance, angle, rspeed, data):
+
+        self.robotrab.add_data(angle, rspeed)
+
+        self.last_update = time.time()
 
         self.theta = - math.pi * data[2] / 1800. + 2 * math.pi
 
         # angle at which the beacon is seen by the robot's RaB
-        self.phi = math.atan2(math.sin(math.pi * angle / 1800.),
-                              math.cos(math.pi * angle / 1800.))
+        self.phi = self.robotrab.get_orientation()
 
         self.r = data[1] / 1000.  # in meters
 
@@ -435,11 +446,11 @@ class Beacon:
         self.robot_x = math.cos(self.theta) * self.r
         self.robot_y = math.sin(self.theta) * self.r
         # orientation of the robot, in the beacon frame
-        self.robot_theta = math.pi - (self.theta + self.phi)
+        self.robot_theta = math.pi - (self.theta - self.phi)
 
 
     def obsolete(self):
-        if time.time() - self.update > self.OBSOLETE_AFTER:
+        if time.time() - self.last_update > self.OBSOLETE_AFTER:
             return True
         else:
             return False
