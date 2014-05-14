@@ -76,12 +76,17 @@ def face(robot, pose, w = 0.5, backwards = False):
     :param speed: rotation speed, in rad.s^-1
     :param backwards: (default: False) If true, face 'backwards' (ie turn back to target)
     """
-    angle, _  = robot.pose.pantilt(pose)
+    try:
+        angle, _  = robot.pose.pantilt(pose)
 
-    if backwards:
-        angle = robot.pose.normalize_angle(angle + math.pi)
+        if backwards:
+            angle = robot.pose.normalize_angle(angle + math.pi)
 
-    robot.turn(angle, w).result()
+        robot.turn(angle, w).result()
+
+    except ActionCancelled:
+        logger.debug("Action 'face' successfully cancelled.")
+        # nothing more to do since the 'turn' sub-action takes care of setting the speed to 0
 
 
 @action
@@ -94,16 +99,16 @@ def move(robot, distance, v = 0.1):
     :param distance: distance to move, in meters
     :param v: (default: 0.5) linear velocity
     """
-    initial_pose = robot.pose.myself()
-    #TODO: ease in/ease out
-    robot.speed(v=v if distance > 0 else -v)
-
     try:
+        initial_pose = robot.pose.myself()
+        #TODO: ease in/ease out
+        robot.speed(v=v if distance > 0 else -v)
+
         while robot.pose.distance(initial_pose) < abs(distance):
             time.sleep(0.1)
 
     except ActionCancelled:
-        pass
+        logger.debug("Action 'move' successfully cancelled.")
     finally:
         robot.speed(0)
 
@@ -146,7 +151,7 @@ def turn(robot, angle, w = 0.5):
             time.sleep(0.1)
 
     except ActionCancelled:
-        pass
+        logger.debug("Action 'turn' successfully cancelled.")
     finally:
         robot.speed(0)
 
@@ -193,6 +198,7 @@ def goto(robot,
             if abs(angle) > epsilon2 \
                 or dist > prev_dist: # we are not getting closer anymore!
 
+                logger.warning("Missed! Trying to face again my target...")
                 robot.speed(0)
                 with WHEELS:
                     robot.face(pose, w, backwards = backwards).result()
