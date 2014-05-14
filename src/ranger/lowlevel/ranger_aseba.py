@@ -138,6 +138,10 @@ class Ranger(GenericRobot):
         #                   End of ASEBA initialization
         #######################################################################
 
+    def close(self):
+        self.aseba.close()
+        super(Ranger, self).close()
+
     def lefteye(self, x, y):
         """
         Move the pupil of the left eye
