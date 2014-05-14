@@ -14,7 +14,7 @@ class OrientationEstimator:
     def __init__(self):
 
 
-        self.default_nb_readings = 10
+        self.default_nb_readings = 20
         self.last_readings = collections.deque(maxlen=self.default_nb_readings)
 
         self.last_angle = 0
@@ -94,13 +94,13 @@ class OrientationEstimator:
     def add_data(self, val, speed):
         if abs(speed) < 0.001:
             return
-        self.last_readings.append((val, speed))
+        self.last_readings.append((int(val), speed))
         self.dirty = True
 
 
     def get_orientation(self):
-        if self.dirty and len(self.last_readings) > self.default_nb_readings:
-            self.last_angle = self.match(self.last_readings)
+        if self.dirty and len(self.last_readings) >= self.default_nb_readings:
+            self.last_angle = self.match(self.last_readings) - math.pi
             self.dirty = False
 
         return self.last_angle
