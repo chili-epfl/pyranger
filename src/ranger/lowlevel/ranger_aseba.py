@@ -16,11 +16,13 @@ import math, time
 
 import threading # for threading.Condition
 
-from robots import GenericRobot
 robotlogger = logging.getLogger("robots")
 robotlogger.addHandler(console)
 
+from robots import GenericRobot
+
 from robots.helpers.helpers import enum
+from robots.helpers.position import PoseManager # for normalize_angle
 from robots.introspection import introspection
 
 from aseba import Aseba
@@ -450,7 +452,7 @@ class Beacon:
         self.robot_x = math.cos(self.theta) * self.r
         self.robot_y = math.sin(self.theta) * self.r
         # orientation of the robot, in the beacon frame
-        self.robot_theta = math.pi - (self.theta - self.phi)
+        self.robot_theta = PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
 
 
     def obsolete(self):

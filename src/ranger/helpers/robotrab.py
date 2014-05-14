@@ -100,7 +100,7 @@ class OrientationEstimator:
 
     def get_orientation(self):
         if self.dirty and len(self.last_readings) >= self.default_nb_readings:
-            self.last_angle = self.match(self.last_readings) - math.pi
+            self.last_angle = self.match(self.last_readings)
             self.dirty = False
 
         return self.last_angle
