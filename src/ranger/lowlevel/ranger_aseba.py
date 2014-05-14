@@ -281,19 +281,28 @@ class Ranger(GenericRobot):
 
         self._send_evt("setSpeed", l, r)
 
-    def get_full_state(self):
+    def wait_for_state_update(self, timeout = 2):
+        """
+        TODO: Not too good... what is in general the semantic of 'wait_for_state'? seem to be very robot dependent...
+        """
+
+        if self.main_update.wait(timeout) is None:
+            raise RuntimeError("'main' node does not transmit its state!! Check the connection to the aseba network.")
+
+        return
+
+    def get_full_state(self, timeout = 2):
         """Blocks until the full state of the robot has been
         received from the low-level.
         """
-        MAX_WAIT = 2 # seconds
 
-        if self.main_update.wait(MAX_WAIT) is None:
-            raise Exception("'main' node does not transmit its state!! Check the connection to the aseba network.")
+        if self.main_update.wait(timeout) is None:
+            raise RuntimeError("'main' node does not transmit its state!! Check the connection to the aseba network.")
 
-        if self.neuil_update.wait(MAX_WAIT) is None:
-            raise Exception("'neuil' node does not transmit its state!! Check the connection to the aseba network.")
+        if self.neuil_update.wait(timeout) is None:
+            raise RuntimeError("'neuil' node does not transmit its state!! Check the connection to the aseba network.")
 
-        if self.rab_update.wait(MAX_WAIT) is None:
+        if self.rab_update.wait(timeout) is None:
             logger.warning("I did not see any beacons during initialization! I can not set my absolute location.")
         else:
             if MYSTATION not in self.beacons:
@@ -330,6 +339,7 @@ class Ranger(GenericRobot):
             # "encoders" = [msg[12], msg[13], msg[14], msg[15]]
             self.odom.update(-msg[14], msg[12]) # left, right
             x,y,th,v,w = self.odom.get()
+
             self.state["x"] = x
             self.state["y"] = y
             self.state["theta"] = self.pose.normalize_angle(th)
