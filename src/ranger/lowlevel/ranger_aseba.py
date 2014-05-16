@@ -42,10 +42,9 @@ def clamp(val, vmin, vmax):
 
 class Ranger(GenericRobot):
 
-    eyelids = enum(OPEN=(100,100), 
-                HALFOPEN = (50, 50), 
-                CLOSED = (0,0), 
-                UNDEFINED = None) #undefined can occur if the 2 eyes have different lid position
+    eyelids = enum(OPEN=((100,100), (100, 100)),
+                HALFOPEN = ((50, 50), (50, 50)),
+                CLOSED = ((0,0), (0, 0)))
 
 
     STATE = {
@@ -93,6 +92,7 @@ class Ranger(GenericRobot):
 
         # creates accessors for each of the fields in STATE
         self.state.update(Ranger.STATE)
+        self.state.eyelids = Ranger.eyelids.OPEN
 
         #######################################################################
         #                       ASEBA initialization
@@ -214,36 +214,24 @@ class Ranger(GenericRobot):
                 self.lefteye(x, y)
 
         if lids:
-            self.leftlid(lids)
-            self.rightlid(lids)
-            left_lid = lids
-            right_lid = lids
+            # lids can be either a tuple (upper, lower) shared by both eyes
+            # or a tuple of tuples ((lu, ll), (ru, rl))
+            l, r = lids
+            if isinstance(l, tuple):
+                self.leftlid(l)
+                left_lid = l
+                self.rightlid(r)
+                right_lid = r
+            else:
+                self.leftlid(lids)
+                self.rightlid(lids)
+                left_lid = lids
+                right_lid = lids
         else:
             self.leftlid(left_lid)
             self.rightlid(right_lid)
-
-        if left_lid and right_lid:
-            if left_lid[0] > 60 and \
-            left_lid[1] > 60 and \
-            right_lid[0] > 60 and \
-            right_lid[1] > 60:
-                self.state["eyelids"] = Ranger.eyelids.OPEN
-            elif left_lid[0]  < 60 and left_lid[0]  > 10 and \
-                left_lid[1]  < 60 and left_lid[1]  > 10 and \
-                right_lid[0] < 60 and right_lid[0] > 10 and \
-                right_lid[1] < 60 and right_lid[1] > 10:
-                self.state["eyelids"] = Ranger.eyelids.HALFOPEN
-            elif left_lid[0]  == 0 and \
-                left_lid[1]  == 0 and \
-                right_lid[0] == 0 and \
-                right_lid[1] == 0:
-                self.state["eyelids"] = Ranger.eyelids.CLOSED
-            else:
-                self.state["eyelids"] = Ranger.eyelids.UNDEFINED
-
-        else:
-            self.state["eyelids"] = Ranger.eyelids.UNDEFINED
-
+        
+        self.state["eyelids"] = (left_lid, right_lid)
 
     def led_pattern(self, pattern_id, repeat = False):
         self._send_evt("playLedVid", pattern_id, repeat)
