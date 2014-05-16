@@ -290,6 +290,10 @@ class Ranger(GenericRobot):
 
         return
 
+    def loglevel(self, level):
+        super(Ranger, self).loglevel(level)
+        logger.setLevel(level)
+
     def get_full_state(self, timeout = 2):
         """Blocks until the full state of the robot has been
         received from the low-level.
