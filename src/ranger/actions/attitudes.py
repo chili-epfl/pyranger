@@ -1,0 +1,157 @@
+import logging; logger = logging.getLogger("ranger.attitudes")
+import time
+import math
+from random import uniform as rand
+from random import choice as rand_in
+from robots.decorators import action, lock
+from robots.signals import ActionCancelled
+
+from ranger.res import *
+from ranger import Ranger # for eyelids constants
+
+@action
+def idle(robot):
+
+    try:
+        while True:
+            robot.sleep(rand(10, 30))
+            val = rand_in([-75,-60, 60, 75])
+            robot.eyes((val, 0))
+            robot.sleep(1)
+            robot.eyes((0, 0))
+
+
+    except ActionCancelled:
+        robot.eyes(eyes = (0, 0))
+
+
+@action
+@lock(EYES)
+def wakeup(robot):
+
+    try:
+        robot.eyes(eyes = (0, 0))
+
+        robot.eyes(left_lid = (rand(18, 25), rand(18,25)))
+        robot.sleep(rand(0.6, 0.7))
+        robot.eyes(right_lid = (rand(18, 25), rand(18,25)))
+        robot.sleep(rand(0.6, 0.7))
+        robot.eyes(lids = Ranger.eyelids.OPEN)
+
+    except ActionCancelled:
+        robot.eyes(eyes = (0, 0),
+                   lids = Ranger.eyelids.OPEN)
+
+@action
+@lock(LIDS)
+def angry(robot, level = 0.5):
+
+    try:
+        robot.eyes(lids = (40 - (level * 20), 90))
+    except ActionCancelled:
+        robot.eyes(lids = Ranger.eyelids.OPEN)
+
+
+@action
+@lock(LIDS)
+def sick(robot):
+
+    try:
+        robot.eyes(lids = (100, 30))
+    except ActionCancelled:
+        robot.eyes(lids = Ranger.eyelids.OPEN)
+
+@action
+@lock(LIDS)
+def curious(robot):
+
+    try:
+        robot.eyes(lids = (40, 0))
+    except ActionCancelled:
+        robot.eyes(lids = Ranger.eyelids.OPEN)
+
+
+@action
+@lock(LIDS)
+def blink(robot):
+
+    try:
+        llid, rlid = robot.state.eyelids
+        robot.eyes(lids = Ranger.eyelids.CLOSED)
+        robot.sleep(rand(0.2, 0.3))
+        robot.eyes(left_lid = llid,
+                   right_lid = rlid)
+    except ActionCancelled:
+        robot.eyes(lids = Ranger.eyelids.OPEN)
+
+@action
+def background_blink(robot, focused = False):
+    """ Continuous blink pattern, to be typically run in the background.
+
+    Note that the LID resource is locked only during the blink itself,
+    not between blinks.
+    """
+
+    # based on http://en.wikipedia.org/wiki/Blink, blink rate: ~every 6sec
+    # and ~ x3 when focused
+    try:
+        while True:
+            if focused:
+                robot.sleep(12 + rand(-2, 2))
+            else:
+                robot.sleep(6 + rand(-2, 2))
+
+            robot.blink()
+
+    except ActionCancelled:
+        pass
+
+@action
+@lock(LIDS)
+def wink(robot, side = "right"):
+
+    try:
+        llid, rlid = robot.state.eyelids
+        
+        if side.lower() == "right":
+            robot.eyes(right_lid = (0,0))
+        else:
+            robot.eyes(left_lid = (0,0))
+
+        robot.sleep(rand(0.1, 0.3))
+
+        robot.eyes(left_lid = llid,
+                   right_lid = rlid)
+
+    except ActionCancelled:
+        robot.eyes(lids = Ranger.eyelids.OPEN)
+
+
+
+
+
+@action
+@lock(EYES)
+def sneak_in(robot):
+
+    try:
+        robot.eyes(lids = (rand(18, 25), rand(18,25)))
+        robot.sleep(rand(0.6, 0.7))
+        robot.eyes(eyes = (rand(55,75), 0),
+                   lids = (rand(18, 25), rand(18,25)))
+
+        robot.sleep(rand(1.0,1.5))
+
+        robot.eyes(eyes = (rand(-55,-75), 0),
+                   lids = (rand(18, 25), rand(18,25)))
+
+        robot.sleep(rand(1.0, 1.5))
+
+        robot.eyes(eyes = (rand(55,75), 0),
+                   lids = (rand(18, 25), rand(18,25)))
+
+        robot.sleep(rand(1.0, 1.5))
+        robot.eyes((0,0), Ranger.eyelids.OPEN)
+
+    except ActionCancelled:
+        robot.eyes((0, 0))

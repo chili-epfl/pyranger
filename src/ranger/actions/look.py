@@ -57,28 +57,3 @@ def closeeyes(robot):
     if not robot.eyelids == Ranger.eyelids.CLOSED:
         robot.eyes((0,0), Ranger.eyelids.CLOSED)
 
-@action
-@lock(EYES)
-def sneak_in(robot):
-
-    try:
-        robot.eyes(lids = (rand(18, 25), rand(18,25)))
-        time.sleep(rand(0.6, 0.7))
-        robot.eyes(eyes = (rand(55,75), 0),
-                   lids = (rand(18, 25), rand(18,25)))
-
-        time.sleep(rand(1.0,1.5))
-
-        robot.eyes(eyes = (rand(-55,-75), 0),
-                   lids = (rand(18, 25), rand(18,25)))
-
-        time.sleep(rand(1.0, 1.5))
-
-        robot.eyes(eyes = (rand(55,75), 0),
-                   lids = (rand(18, 25), rand(18,25)))
-
-        time.sleep(rand(1.0, 1.5))
-        robot.eyes((0,0), Ranger.eyelids.OPEN)
-
-    except ActionCancelled:
-        robot.eyes((0, 0))
