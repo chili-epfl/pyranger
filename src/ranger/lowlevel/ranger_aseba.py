@@ -371,13 +371,13 @@ class Ranger(GenericRobot):
         msg[5]: angle where the robot is seen, from the beacon R&B perspective (ie, theta polar coord of robot in map)
         msg[4]: distance where the robot is seen, from the beacon R&B perspective (ie, r polar coord of robot in map)
         """
-        id, angle, distance, my_own_id, reverse_distance, reverse_angle = [int(val) for val in msg[:6]] # convert DBus integers to regular int
+        id, angle, distance, my_own_id, packet_id, reverse_distance, reverse_angle, lolettes = [int(val) for val in msg[:8]] # convert DBus integers to regular int
 
 
         # convert to meters and radians
-        angle = PoseManager.normalize_angle(math.pi * angle / 1800.)
+        angle = PoseManager.normalize_angle(-math.pi * angle / 1800.)
         distance = distance / 1000.
-        reverse_angle = PoseManager.normalize_angle(math.pi * reverse_angle / 1800.)
+        reverse_angle = PoseManager.normalize_angle(-math.pi * reverse_angle / 1800.)
         reverse_distance = reverse_distance / 1000.
 
         if distance > 0: # may be zero in case of error (somewhere...)
@@ -388,8 +388,7 @@ class Ranger(GenericRobot):
                     distance = distance,
                     angle = angle,
                     reverse_distance = reverse_distance,
-                    reverse_angle = reverse_angle,
-                    rspeed = self.state.w)
+                    reverse_angle = reverse_angle)
 
             self.state["freq_rab"] = self.aseba.events_freq["receiverFeedback"]
 
