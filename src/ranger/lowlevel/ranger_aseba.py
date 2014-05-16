@@ -29,7 +29,6 @@ from aseba import Aseba
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.helpers.position import RangerPoseManager
-from ranger.helpers.robotrab import OrientationEstimator
 from ranger.res import MYSTATION
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
@@ -380,18 +379,18 @@ class Ranger(GenericRobot):
         msg[5]: angle where the robot is seen, from the beacon R&B perspective (ie, theta polar coord of robot in map)
         msg[4]: distance where the robot is seen, from the beacon R&B perspective (ie, r polar coord of robot in map)
         """
-        id = int(msg[0]) # convert DBus integers to regular int
+        id, angle, distance, my_own_id, reverse_distance, reverse_angle = [int(val) for val in msg[:6]] # convert DBus integers to regular int
 
-        distance = msg[2]
         if distance > 0: # may be zero in case of error (somewhere...)
             if id not in self.beacons:
                 self.beacons[id] = Beacon(id)
 
             self.beacons[id].update(
-                    distance = msg[2],
-                    angle = msg[1],
-                    rspeed = self.state.w,
-                    data = [msg[3+i] for i in range(7)])
+                    distance = distance,
+                    angle = angle,
+                    reverse_distance = reverse_distance,
+                    reverse_angle = reverse_angle,
+                    rspeed = self.state.w)
 
             self.state["freq_rab"] = self.aseba.events_freq["receiverFeedback"]
 
@@ -435,24 +434,21 @@ class Beacon:
 
     def __init__(self, id):
 
-        self.robotrab = OrientationEstimator()
-
         self.last_update = time.time()
 
         self.id = id
 
-    def update(self, distance, angle, rspeed, data):
+    def update(self, distance, angle, 
+                     reverse_distance, reverse_angle):
 
-        self.robotrab.add_data(angle, rspeed)
+        self.r = ((distance + reverse_distance) / 2) / 1000. # in meters
 
         self.last_update = time.time()
 
-        self.theta = - math.pi * data[2] / 1800. + 2 * math.pi
+        self.theta = PoseManager.normalize_angle(- math.pi * reverse_angle / 1800.)
 
         # angle at which the beacon is seen by the robot's RaB
-        self.phi = self.robotrab.get_orientation()
-
-        self.r = data[1] / 1000.  # in meters
+        self.phi = PoseManager.normalize_angle(math.pi * angle / 1800.)
 
         # beacon cartesian coordinates, *relative to the robot frame!*
         self.x = math.cos(self.phi) * self.r
