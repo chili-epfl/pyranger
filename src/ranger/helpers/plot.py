@@ -32,6 +32,21 @@ class XYPlot:
         self.last_y = 0
         self.last_th = 0
 
+        self.objects = {}
+
+
+    def cleanup(self):
+        if self.ax.artists:
+            for artist in self.ax.artists:
+                artist.remove() # remove previous arrow
+
+    def draw(self):
+        self.cleanup()
+        for obj in self.objects.values():
+            self.ax.add_artist(obj)
+
+        plt.draw()
+
     def add(self, x, y, theta = 0):
 
         if abs(x - self.last_x) > 0.02 or abs(y-self.last_y) > 0.02: #move by more than 2 cm?
@@ -43,11 +58,15 @@ class XYPlot:
 
 
         if abs(theta - self.last_th) > 0.02: #turn by more than 0.02 rad?
-            if self.ax.artists:
-                self.ax.artists[0].remove() # remove previous arrow
-            plt.arrow( x, y, cos(theta) * 0.2, sin(theta) * 0.2, fc="k", ec="k", head_width=0.1, head_length=0.2 )
 
-        plt.draw()
+            #self.objects["arrow"] = plt.Arrow( x, y, cos(theta) * 0.2, sin(theta) * 0.2, fc="k", ec="k", head_width=0.1, head_length=0.2 )
+            self.objects["arrow"] = plt.Arrow( x, y, cos(theta) * 0.2, sin(theta) * 0.2, fc="k", ec="k", width = 0.1, lw = 0.1)
+
+        self.draw()
+
+    def poi(self, name, x, y, color = 'r'):
+        self.objects[name] = plt.Circle((x,y), .2, color=color)
+        self.draw()
 
 
 if __name__ == "__main__":

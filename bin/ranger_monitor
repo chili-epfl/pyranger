@@ -241,6 +241,12 @@ class Monitor:
                 if self.showtraj:
                     trajplot.add(self.robot.state.x, self.robot.state.y, self.robot.state.theta)
 
+                    for beacon in self.robot.beacons.values():
+                        if not beacon.obsolete():
+                            trajplot.poi("beacon_%s" % beacon.id,
+                                        beacon.x - self.robot.state.x, 
+                                         beacon.y - self.robot.state.y)
+
 
                 now = time.time()
                 self._freq(1. / (now - last_time))
@@ -252,6 +258,7 @@ class Monitor:
             pass
         finally:
             self.robot.speed(0)
+
 
 if __name__ == '__main__':
 
