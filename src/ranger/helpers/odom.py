@@ -46,12 +46,13 @@ diff_controller.py - controller for a differential drive
 
 """
 import time
-from math import sin, cos
+from math import sin, cos, pi
 
-TICKS_METER = 130000 # The number of wheel encoder ticks per meter of travel
-#TICKS_TO_PID = 0.005124 # motor speed to send to go to 1 tick/sec
+RANGER_WHEEL_RADIUS = 0.053 #m
+RANGER_WHEEL_BASE = 0.3 #m
 
-BASE_WIDTH = 0.3
+TICKS_360 = 43291 # The number of wheel encoder ticks per complete wheel turn
+
 
 ENCODER_MIN = -32768
 ENCODER_MAX = 32768
@@ -78,6 +79,15 @@ class Odom:
         self.dx = 0                 # speeds in x/rotation
         self.dr = 0
         self.then = time.time()
+
+        self.set_wheelbase(RANGER_WHEEL_BASE)
+        self.set_wheelradius(RANGER_WHEEL_RADIUS)
+
+    def set_wheelbase(self, wheelbase):
+        self.base_width = wheelbase
+
+    def set_wheelradius(self, radius):
+        self.ticks_meter = TICKS_360 / (2 * pi * radius)
 
     def reset(self, x = 0., y = 0., theta = 0.):
         self.enc_left = None        # wheel encoder readings
@@ -127,15 +137,15 @@ class Odom:
             d_left = 0
             d_right = 0
         else:
-            d_left = (self.left - self.enc_left) / TICKS_METER
-            d_right = (self.right - self.enc_right) / TICKS_METER
+            d_left = (self.left - self.enc_left) / self.ticks_meter
+            d_right = (self.right - self.enc_right) / self.ticks_meter
         self.enc_left = self.left
         self.enc_right = self.right
         
         # distance traveled is the average of the two wheels 
         d = ( d_left + d_right ) / 2
         # this approximation works (in radians) for small angles
-        th = ( d_right - d_left ) / BASE_WIDTH
+        th = ( d_right - d_left ) / self.base_width
         # calculate velocities
         self.dx = d / elapsed
         self.dr = th / elapsed
@@ -164,7 +174,7 @@ class Odom:
         # dx = (l + r) / 2
         # dr = (r - l) / w
 
-        left = 1.0 * v + w * BASE_WIDTH / 2 
-        right = 1.0 * v - w * BASE_WIDTH / 2
+        left = 1.0 * v + w * self.base_width / 2 
+        right = 1.0 * v - w * self.base_width / 2
 
         return (left, right)
