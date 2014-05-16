@@ -381,6 +381,13 @@ class Ranger(GenericRobot):
         """
         id, angle, distance, my_own_id, reverse_distance, reverse_angle = [int(val) for val in msg[:6]] # convert DBus integers to regular int
 
+
+        # convert to meters and radians
+        angle = PoseManager.normalize_angle(math.pi * angle / 1800.)
+        distance = distance / 1000.
+        reverse_angle = PoseManager.normalize_angle(math.pi * reverse_angle / 1800.)
+        reverse_distance = reverse_distance / 1000.
+
         if distance > 0: # may be zero in case of error (somewhere...)
             if id not in self.beacons:
                 self.beacons[id] = Beacon(id)
@@ -421,7 +428,7 @@ class Beacon:
       |            r  _.-' \   `-/ /`.rx
       |            .-'      `-___-'
       |Beacon   .-'            phi
-    ,-|-.    .-'--.
+    ,-|-.    .-'<-.
    /  |  _.-'      | theta
   (   ............,.........>
    \     /                  bx
@@ -440,15 +447,25 @@ class Beacon:
 
     def update(self, distance, angle, 
                      reverse_distance, reverse_angle):
+        """
+        :param distance: distance (in m) to which the robot *believes* its
+        stands from the beacon.
+        :param angle: angle (in rad) to which the robot sees the beacon, in
+        the robot frame (phi on the above diagram)
+        :param reverse_distance: distance (in m) to which the beacon belives
+        the robot is.
+        :param reverse_angle: angle (in rad) to which the robot is seen, in
+        the beacon frame (theta in the diagram above)
 
-        self.r = ((distance + reverse_distance) / 2) / 1000. # in meters
+        """
+        self.r = (distance + reverse_distance) / 2
 
         self.last_update = time.time()
 
-        self.theta = PoseManager.normalize_angle(- math.pi * reverse_angle / 1800.)
+        self.theta = reverse_angle
 
         # angle at which the beacon is seen by the robot's RaB
-        self.phi = PoseManager.normalize_angle(math.pi * angle / 1800.)
+        self.phi = angle
 
         # beacon cartesian coordinates, *relative to the robot frame!*
         self.x = math.cos(self.phi) * self.r
