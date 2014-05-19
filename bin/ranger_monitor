@@ -109,11 +109,11 @@ class Monitor:
                 self.out.relmoveto(0,1)
                 self.out.label("Beacon %s detected" % beacon.id)
                 self.out.relmoveto(0,1)
-                self.out.label("(r, θ): (%.2fm, %.1f°) -> (x:%.2fm, y:%.2fm, θr:%.1f°), Base seen at: %.1f°" % \
+                self.out.label("(r, θ): (%.2fm, %.1f°) -> (x:%.2fm, y:%.2fm, θr:%.1f°), Base seen at: (%.2fm, %.1f°)" % \
                                     (beacon.r, 
                                      180./math.pi * beacon.theta,
                                      beacon.robot_x, beacon.robot_y, 180./math.pi * beacon.robot_theta,
-                                     180./math.pi * beacon.phi), fg="base0")
+                                     beacon.dist, 180./math.pi * beacon.phi), fg="base0")
             else:
                 # clear!
                 self.out.clear(29, 9)
