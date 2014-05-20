@@ -105,7 +105,7 @@ class Ranger(GenericRobot):
         nodes = self.aseba.get_nodes_list()
         if not dummy and len(nodes) != 3:
             logger.error("One of the Ranger Aseba node is not up!!")
-            logger.debug("List of active nodes: {0}".format(nodes))
+            logger.error("List of active nodes: {0}".format(nodes))
             raise Exception("Missing Aseba node")
 
         # (Re-)load the aesl scripts, mandatory for Aseba to know about
@@ -299,10 +299,13 @@ class Ranger(GenericRobot):
             if MYSTATION not in self.beacons:
                 logger.warning("I did not see the charging station during initialization! I can not set my absolute location.")
             else:
-                self.odom.reset(self.beacons[MYSTATION].robot_x,
-                                self.beacons[MYSTATION].robot_y)
-                                # do not set theta for now, too unreliable -> this means that the robot *must* be
-                                # initially oriented like the base station.
+                if not self.beacons[MYSTATION].valid:
+                    logger.warning("Charging station out of sight or too close during initialization! I can not set my absolute location.")
+                else:
+                    self.odom.reset(self.beacons[MYSTATION].robot_x,
+                                    self.beacons[MYSTATION].robot_y)
+                                    # do not set theta for now, too unreliable -> this means that the robot *must* be
+                                    # initially oriented like the base station.
 
     def _process_main_feedback(self, msg, with_encoders = True):
         if introspection:
@@ -435,6 +438,7 @@ class Beacon:
         self.last_update = time.time()
 
         self.id = id
+        self.valid = False
 
     def update(self, distance, angle, 
                      reverse_distance, reverse_angle):
@@ -449,25 +453,41 @@ class Beacon:
         the beacon frame (theta in the diagram above)
 
         """
-        self.r = (distance + reverse_distance) / 2
 
         self.last_update = time.time()
 
-        self.theta = reverse_angle
+        # not valid if:
+        #  - distance == 6.128m, correspond to beacon out of sight
+        #  - reverse_distance < 1m (reverse angle readings not meaningful if
+        #  too close)
 
-        # angle at which the beacon is seen by the robot's RaB
-        self.phi = angle
 
-        # beacon cartesian coordinates, *relative to the robot frame!*
-        self.x = math.cos(self.phi) * self.r
-        self.y = math.sin(self.phi) * self.r
+        self.valid =    distance < 6.168 \
+                    and reverse_distance > 1.0 
 
-        # robot cartesian coordinates, *relative to the beacon frame!*
-        self.robot_x = math.cos(self.theta) * self.r
-        self.robot_y = math.sin(self.theta) * self.r
-        # orientation of the robot, in the beacon frame
-        self.robot_theta = PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
+        if self.valid:
+            self.r = reverse_distance
+            self.dist = distance
 
+
+            self.theta = reverse_angle
+
+            # angle at which the beacon is seen by the robot's RaB
+            self.phi = angle
+
+            # beacon cartesian coordinates, *relative to the robot frame!*
+            self.x = math.cos(self.phi) * self.r
+            self.y = math.sin(self.phi) * self.r
+
+            # robot cartesian coordinates, *relative to the beacon frame!*
+            self.robot_x = math.cos(self.theta) * self.r
+            self.robot_y = math.sin(self.theta) * self.r
+            # orientation of the robot, in the beacon frame
+            self.robot_theta = PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
+        else:
+            self.r = self.dist = self.theta = None
+            self.phi = self.x = self.y = None
+            self.robot_x = self.robot_y = self.robot_theta = None
 
     def obsolete(self):
         if time.time() - self.last_update > self.OBSOLETE_AFTER:
