@@ -318,20 +318,21 @@ class Ranger(GenericRobot):
 
         self.state["battery"] = self.filtered("battery", msg[5])
         self.state["bumper"] = msg[6]
-        self.state["velocity_left"] = self.filtered("lspeed", msg[7])
-        self.state["velocity_right"] = self.filtered("rspeed", -msg[8])
+        self.state["scale"] = self.filtered("scale", linear_interpolation(msg[7], SCALE))
+        self.state["velocity_left"] = self.filtered("lspeed", msg[8])
+        self.state["velocity_right"] = self.filtered("rspeed", -msg[9])
 
         def decompress_touch(state):
             raw = [bool(state & 1 << i) for i in range(9)]
             return [raw[0:9:3], raw[1:9:3], raw[2:9:3]]
 
-        self.state["touch_left"] = decompress_touch(msg[10])
-        self.state["touch_rear"] = decompress_touch(msg[11])
-        self.state["touch_right"] = decompress_touch(msg[9])
+        self.state["touch_left"] = decompress_touch(msg[11])
+        self.state["touch_rear"] = decompress_touch(msg[12])
+        self.state["touch_right"] = decompress_touch(msg[10])
 
         if with_encoders:
             # "encoders" = [msg[12], msg[13], msg[14], msg[15]]
-            self.odom.update(-msg[14], msg[12]) # left, right
+            self.odom.update(-msg[15], msg[13]) # left, right
             x,y,th,v,w = self.odom.get()
 
             self.state["x"] = x
@@ -340,9 +341,15 @@ class Ranger(GenericRobot):
             self.state["v"] = v
             self.state["w"] = w
 
-        self.state["charging"] = msg[12 if not with_encoders else 16]
-        self.state["motor_current_left"] = msg[13 if not with_encoders else 17]
-        self.state["motor_current_right"] = msg[14 if not with_encoders else 18]
+        self.state["charging"] = msg[13 if not with_encoders else 17]
+
+        # when charging, and *assuming the robot is correctly positioned on
+        # the charging station*, the location is known
+        if self.state.charging:
+            self.odom.reset(x=0.35, y=0, theta=0)
+
+        self.state["motor_current_left"] = msg[14 if not with_encoders else 18]
+        self.state["motor_current_right"] = msg[15 if not with_encoders else 19]
 
         self.state["freq_main"] = self.aseba.events_freq["mainFeedbackWithEncoders"]
 
@@ -357,7 +364,6 @@ class Ranger(GenericRobot):
         self.state["ir_right"] = self.filtered("ir_right", linear_interpolation(msg[2], GP2Y0A41SK0F))
         self.state["lolette"] = msg[3]
 
-        self.state["scale"] = self.filtered("scale", linear_interpolation(msg[4], SCALE))
 
         self.state["freq_neuil"] = self.aseba.events_freq["neuilFeedback"]
 
