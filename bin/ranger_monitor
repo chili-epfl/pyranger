@@ -84,39 +84,44 @@ class Monitor:
                              autocolor = True)
 
         self.out.moveto(0,2)
-        self.out.absolutebar(state.velocity_left, 100, "%", label = " Left wheel", minvalue = -100)
+        self.out.absolutebar(state.velocity_left, 100, "%", maxlength=25, label = " Left wheel", minvalue = -100)
         self.out.relmoveto(0,1)
-        self.out.absolutebar(state.velocity_right, 100, "%", label = "Right wheel", minvalue = -100)
+        self.out.absolutebar(state.velocity_right, 100, "%", maxlength=25, label = "Right wheel", minvalue = -100)
 
         self.out.moveto(48,2)
         self.out.vseparator(2)
         self.out.moveto(50,2)
         self.out.label("Robot odometry:")
         self.out.relmoveto(0,1)
-        self.out.label("x:%.2fm, y:%.2fm, θ:%.1f°" % (state.x, state.y, 180. / math.pi * state.theta))
+        self.out.label("x:{:>5.2f}m, y:{:>5.2f}m, θ:{:>6.1f}°".format(state.x, state.y, 180. / math.pi * state.theta))
 
         ###################################################
         ### Beacons
         ###################################################
 
-        self.out.moveto(78,2)
+        self.out.moveto(79,2)
         self.out.vseparator(8)
 
-        self.out.moveto(80,1)
+        self.out.moveto(81,1)
+
+        # clear!
+        self.out.clear(60, 9)
 
         for beacon in robot.beacons.values():
             if not beacon.obsolete():
                 self.out.relmoveto(0,1)
                 self.out.label("Beacon %s detected" % beacon.id)
                 self.out.relmoveto(0,1)
-                self.out.label("(r, θ): (%.2fm, %.1f°) -> (x:%.2fm, y:%.2fm, θr:%.1f°), Base seen at: (%.2fm, %.1f°)" % \
-                                    (beacon.r, 
-                                     180./math.pi * beacon.theta,
-                                     beacon.robot_x, beacon.robot_y, 180./math.pi * beacon.robot_theta,
-                                     beacon.dist, 180./math.pi * beacon.phi), fg="base0")
-            else:
-                # clear!
-                self.out.clear(29, 9)
+                if beacon.valid:
+                    self.out.label("Robot seen at: (%.2fm, %.1f°), beacon seen at: (%.2fm, %.1f°)" % \
+                                        (beacon.r, 
+                                        180./math.pi * beacon.theta,
+                                        beacon.dist,
+                                        180./math.pi * beacon.phi), fg="base0")
+                    self.out.relmoveto(0,1)
+                    self.out.label("-> robot at: (x:{:>5.2f}m, y:{:>5.2f}m, {:>5.1f}°)".format(beacon.robot_x, beacon.robot_y, beacon.robot_theta), fg="base0")
+                else:
+                    self.out.label("(out of sight or too close)")
 
         ###################################################
         ### Touch sensors
@@ -242,7 +247,7 @@ class Monitor:
                     trajplot.add(self.robot.state.x, self.robot.state.y, self.robot.state.theta)
 
                     for beacon in self.robot.beacons.values():
-                        if not beacon.obsolete():
+                        if not beacon.obsolete() and beacon.valid:
                             trajplot.poi("beacon_%s" % beacon.id,
                                         beacon.x - self.robot.state.x, 
                                          beacon.y - self.robot.state.y)
