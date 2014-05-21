@@ -167,9 +167,7 @@ def turn(robot, angle, w = 0.5, easing = True):
 
     try:
         while True:
-            dr = (robot.state.theta - last_theta) % math.pi
-            dr = dr if dr < math.pi/2 else dr - math.pi
-            total_rotation += dr
+            total_rotation += robot.pose.angular_distance(last_theta, robot.state.theta)
             achieved = total_rotation / float(angle)
             logger.debug("Turned by {:.1f}rad ({:.1f}% of target)".format(total_rotation, achieved))
 
