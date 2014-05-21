@@ -24,7 +24,8 @@ def look_for_beacon(robot, beacon_id):
 
     def isseen():
         if beacon_id in robot.beacons and \
-            not robot.beacons[beacon_id].obsolete():
+            not robot.beacons[beacon_id].obsolete() \
+            and robot.beacons[beacon_id].valid:
                 return True
         return False
 
@@ -33,21 +34,23 @@ def look_for_beacon(robot, beacon_id):
     sneakin = None
     turning = None
     try:
+        initial_orientation = robot.state.theta
+
         sneakin = robot.sneak_in()
 
         turning = robot.turn(-math.pi / 4)
         turning.wait()
 
         for i in range(3):
+            if isseen(): break
             turning = robot.turn(math.pi / 2)
             turning.wait()
             if isseen(): break
             turning = robot.turn(-math.pi / 2)
             turning.wait()
-            if isseen(): break
 
 
-        turning = robot.turn(-math.pi / 4)
+        turning = robot.turn(robot.pose.angular_distance(robot.state.theta, initial_orientation))
 
         sneakin.cancel()
 
@@ -66,7 +69,6 @@ def look_for_beacon(robot, beacon_id):
         robot.speed(0)
         if sneakin:
             sneakin.cancel()
-        print("Bouh lilil")
         return False
 
 @action
@@ -81,6 +83,10 @@ def face(robot, pose, w = 0.5, backwards = False):
 
         if backwards:
             angle = robot.pose.normalize_angle(angle + math.pi)
+
+        if abs(angle) < 0.02:
+            logger.debug("Already facing %s. Fine." % pose)
+            return
 
         logger.debug("Need to turn by %s° to face %s" % (180./math.pi*angle, pose))
         robot.turn(angle, w).result()
