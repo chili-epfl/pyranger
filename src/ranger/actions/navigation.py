@@ -16,8 +16,43 @@ def stop(robot):
 @action
 @lock(WHEELS)
 def dock_for_charging(robot):
-    #raise NotImplementedError
-    logger.error("Not implemented!")
+
+    if robot.state.charging:
+        logger.info("Already docked on the charging station. Fine.")
+        return
+
+    with WHEELS:
+        placement = robot.goto([0.5, 0, 0, 0, 0, 0, "station"])
+
+        try:
+            placement.wait()
+        except ActionCancelled:
+            placement.cancel()
+            return
+
+        approach = robot.move(-0.6, v=0.03)
+        robot.on("charging", value = True).do(approach.cancel)
+
+        try:
+            approach.wait()
+        except ActionCancelled:
+            approach.cancel()
+            return
+
+        logger.info("Successfully docked on the charging station!")
+
+@action
+@lock(WHEELS)
+def undock(robot):
+    if not robot.state.charging:
+        logger.info("Not docked (no charging). Nothing to do.")
+        return
+    
+    try:
+        with WHEELS:
+            robot.move(0.4).wait()
+    except ActionCancelled:
+        pass
 
 @action
 def look_for_beacon(robot, beacon_id):
@@ -78,6 +113,10 @@ def face(robot, pose, w = 0.5, backwards = False):
     :param speed: rotation speed, in rad.s^-1
     :param backwards: (default: False) If true, face 'backwards' (ie turn back to target)
     """
+    if robot.pose.distance(pose) < 0.1:
+        logger.warning("Too close to target to face for meaningful rotation. Staying where I am.")
+        return
+
     try:
         angle, _  = robot.pose.pantilt(pose)
 
@@ -88,12 +127,33 @@ def face(robot, pose, w = 0.5, backwards = False):
             logger.debug("Already facing %s. Fine." % pose)
             return
 
-        logger.debug("Need to turn by %s° to face %s" % (180./math.pi*angle, pose))
+        logger.debug("Need to turn by {:.1f}° to face {:s}".format(180./math.pi*angle, pose))
         robot.turn(angle, w).result()
 
     except ActionCancelled:
         logger.debug("Action 'face' successfully cancelled.")
         # nothing more to do since the 'turn' sub-action takes care of setting the speed to 0
+
+@action
+def orient(robot, pose):
+    """ Set the robot orientation so that it aligns with the given
+    pose orientation.
+
+    """
+    
+    try:
+        rx,ry,rz = robot.pose.euler(robot.pose.inframe(pose, "base_link"))
+
+        if abs(rz) < 0.02:
+            logger.debug("Orientation already fine.")
+            return
+
+            logger.debug("Need to turn by {:.1f}° to reach expected orientation".format(180./math.pi*rz))
+
+        robot.turn(rz)
+    except ActionCancelled:
+        # nothing more to do since the 'turn' sub-action takes care of setting the speed to 0
+        pass
 
 def eased_speed(max_speed, achieved):
     #TODO: proper ease in/ease out
@@ -116,7 +176,7 @@ def move(robot, distance, v = 0.2, easing = True):
     last_speed = 0
 
     # if the distance is small, it's useless to move too quickly
-    max_speed = max(0.05, min(abs(distance), abs(v)))
+    max_speed = max(0.01, min(abs(distance)/2, abs(v)))
 
     try:
         initial_pose = robot.pose.myself()
@@ -167,7 +227,9 @@ def turn(robot, angle, w = 0.5, easing = True):
 
     try:
         while True:
-            total_rotation += robot.pose.angular_distance(last_theta, robot.state.theta)
+            theta = robot.state.theta
+            total_rotation += robot.pose.angular_distance(last_theta, theta)
+            last_theta = theta 
             achieved = total_rotation / float(angle)
             logger.debug("Turned by {:.1f}rad ({:.1f}% of target)".format(total_rotation, achieved))
 
@@ -197,12 +259,17 @@ def turn(robot, angle, w = 0.5, easing = True):
 @lock(WHEELS)
 def goto(robot, 
         pose, 
-        v = 0.1, w = 0.5, 
+        v = 0.2, w = 0.5, 
         epsilon = 0.1, epsilon2 = 0.05,
         distance_to_target = 0.0, 
-        ignore_orientation = False,
-        backwards = False):
+        ignore_orientation = False):
     """
+    Move to a given destination.
+
+    The algorithm is currently naive: the robot first face the destination,
+    then moves straight towards it, and finally turns on itself until the
+    desired final orientation is reached (except if ignore_orientation is set to True).
+
 
     :param pose: target destination (including the desired orientation!)
     :param v: desired linear velocity
@@ -211,47 +278,60 @@ def goto(robot,
     :param epsilon2: the acceptable orientation error for the target to be reached, in radians
     :param distance_to_target: desired final distance to target (default: 0)
     :param ignore_orientation: if true, do not set the final robot orientation
-    :param backwards: if true, move backwards
     """
 
     try:
+        if robot.state.charging:
+            # undock first!
+            with WHEELS:
+                robot.undock().wait()
+
         with WHEELS:
-            action = robot.face(pose, w, backwards = backwards)
+            action = robot.face(pose, w)
             #waits until the robot faces the destination
             action.result()
 
-        robot.speed(v = v if not backwards else -v)
+        distance = robot.pose.distance(pose)
+        with WHEELS:
+            motion = robot.move(distance, v)
 
-        prev_dist = robot.pose.distance(pose)
+            prev_dist = distance
+            while True:
+                dist = robot.pose.distance(pose)
+                angle, _ = robot.pose.pantilt(pose)
 
-        while True:
-            dist = robot.pose.distance(pose)
-            angle, _ = robot.pose.pantilt(pose)
+                if dist < epsilon + distance_to_target:
+                    motion.cancel()
+                    logger.info("Reached target")
+                    break
 
-            if dist < epsilon + distance_to_target:
-                logger.info("Reached target")
-                break
+                if abs(angle) > epsilon2:
+                    logger.debug("Correcting heading a bit...")
+                    motion.cancel()
+                    robot.turn(angle, w).wait()
+                    motion = robot.move(dist, v)
 
-            if abs(angle) > epsilon2 \
-                or dist > prev_dist: # we are not getting closer anymore!
+                if dist > prev_dist: # we are not getting closer anymore!
 
-                logger.warning("Missed! Trying to face again my target...")
-                robot.speed(0)
-                with WHEELS:
-                    robot.face(pose, w, backwards = backwards).result()
-                robot.speed(v = v if not backwards else -v)
+                    logger.warning("Missed! Trying to face again my target...")
+                    motion.cancel()
+                    robot.turn(angle, w).wait()
+                    motion = robot.move(dist, v)
 
 
-            if robot.state.bumper:
-                logger.warning("Bumped into something!")
-                robot.speed(0)
-                with WHEELS:
-                    robot.resolve_collision().result()
-                    face(pose, w, backwards = backwards).result()
-                robot.speed(v = v if not backwards else -v)
+                #if robot.state.bumper:
+                #    logger.warning("Bumped into something!")
+                #    robot.speed(0)
+                #    with WHEELS:
+                #        robot.resolve_collision().result()
+                #        face(pose, w, backwards = backwards).result()
+                #    robot.speed(v = v if not backwards else -v)
 
-            prev_dist = dist
-            time.sleep(0.1)
+                prev_dist = dist
+                time.sleep(0.1)
+
+            if not ignore_orientation:
+                robot.orient(pose).wait()
 
     except ActionCancelled:
         logger.warning("Goto action cancelled. Stopping here.")
