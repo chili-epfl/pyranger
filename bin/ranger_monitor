@@ -45,7 +45,6 @@ class Monitor:
         if not silent:
             self.out = ConsoleTK(height = 12)
 
-        self.eyes = [0, 0, 0, 0]
         self.speed = [0, 0]
 
         self._freqs = []
@@ -165,35 +164,7 @@ class Monitor:
 
         robot = self.robot
 
-
-        if key == "w":
-            self.eyes[1] += 5
-            robot.eyes(*self.eyes)
-        elif key == "s":
-            self.eyes[1] -= 5
-            robot.eyes(*self.eyes)
-        elif key == "a":
-            self.eyes[0] += 5
-            robot.eyes(*self.eyes)
-        elif key == "d":
-            self.eyes[0] -= 5
-            robot.eyes(*self.eyes)
-        elif key == "t":
-            self.eyes[3] += 5
-            robot.eyes(*self.eyes)
-        elif key == "g":
-            self.eyes[3] -= 5
-            robot.eyes(*self.eyes)
-        elif key == "f":
-            self.eyes[2] += 5
-            robot.eyes(*self.eyes)
-        elif key == "h":
-            self.eyes[2] -= 5
-            robot.eyes(*self.eyes)
-
-
-
-        elif key == self.out.ARROW_UP:
+        if key == self.out.ARROW_UP:
             self.speed[0] += MAX_SPEED / 10
             self.speed[1] += MAX_SPEED / 10
             robot.speed(*self.speed)
@@ -249,10 +220,10 @@ class Monitor:
                     trajplot.add(self.robot.state.x, self.robot.state.y, self.robot.state.theta)
 
                     for beacon in self.robot.beacons.values():
-                        if not beacon.obsolete() and beacon.valid:
+                        if beacon.last_valid_pose:
                             trajplot.poi("beacon_%s" % beacon.id,
-                                        beacon.x - self.robot.state.x, 
-                                         beacon.y - self.robot.state.y)
+                                         beacon.last_valid_pose["x"], 
+                                         beacon.last_valid_pose["y"])
 
 
                 now = time.time()
