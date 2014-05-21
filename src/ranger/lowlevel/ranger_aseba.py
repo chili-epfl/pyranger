@@ -439,12 +439,14 @@ class Beacon:
     OBSOLETE_AFTER = 5 #seconds
 
 
-    def __init__(self, id):
+    def __init__(self, id, robot):
 
+        self.robot = robot
         self.last_update = time.time()
 
         self.id = id
         self.valid = False
+        self.last_valid_pose = None
 
     def update(self, distance, angle, 
                      reverse_distance, reverse_angle):
@@ -493,6 +495,15 @@ class Beacon:
         # orientation of the robot, in the beacon frame
         self.robot_theta = PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
 
+        if valid:
+            self.last_valid_pose = self.robot.pose.inframe([self.x,
+                                                            self.y,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            self.beacon_theta,
+                                                            "base_link"],
+                                                            "map")
     def obsolete(self):
         if time.time() - self.last_update > self.OBSOLETE_AFTER:
             return True

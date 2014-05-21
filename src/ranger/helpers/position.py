@@ -1,3 +1,5 @@
+import logging; logger = logging.getLogger("ranger.poses")
+
 from robots.helpers.position import PoseManager, UnknownFrameError, InvalidFrameError
 
 from ranger.res import ID, MYSTATION # list of R&B ids known to the system
@@ -38,16 +40,16 @@ class RangerPoseManager(PoseManager):
             except KeyError:
                 raise UnknownFrameError("Beacon %s never seen" % frame)
 
+            if not beacon.last_valid_pose:
+                raise UnknownFrameError("No valid location known for beacon %s." % frame)
+
             if beacon.obsolete():
-                raise InvalidFrameError("Beacon %s has obsolete position (not seen since long time)" % frame)
+                logger.warning("Beacon %s may have obsolete position (not seen since long time). Using last valid position." % frame)
 
             if not beacon.valid:
-                raise InvalidFrameError("Beacon %s has invalid position (out of sight or too close)" % frame)
+                logger.warning("Beacon %s currently has invalid position (out of sight, too close or not facing). Using last valid position." % frame)
 
-
-            return self.inframe(
-                    [beacon.x, beacon.y, 0.0, 0.0, 0.0, beacon.beacon_theta, "base_link"],
-                    "map")
+            return  beacon.last_valid_pose
 
         raise UnknownFrameError("Frame %s does not exist." % frame)
 
