@@ -3,12 +3,15 @@ from robots.helpers.ansistrm import ColorizingStreamHandler
 
 logger = logging.getLogger("ranger")
 logger.setLevel(logging.INFO)
+logger_aseba = logging.getLogger("ranger.aseba")
+logger_aseba.setLevel(logging.DEBUG)
 
 console = ColorizingStreamHandler()
 console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
 console.setFormatter(formatter)
 logger.addHandler(console)
+logger_aseba.addHandler(console)
 
 
 
@@ -410,9 +413,9 @@ class Ranger(GenericRobot):
 
         if not args:
             args = kwargs.values()
-            logger.debug("Event %s(%s) sent." % (id, str(kwargs)))
+            logger_aseba.debug("Event %s(%s) sent." % (id, str(kwargs)))
         else:
-            logger.debug("Event %s(%s) sent." % (id, str(args)))
+            logger_aseba.debug("Event %s(%s) sent." % (id, str(args)))
         self.aseba.send_event(id, args)
 
 class Beacon:
