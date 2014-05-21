@@ -4,7 +4,7 @@ from robots.helpers.ansistrm import ColorizingStreamHandler
 logger = logging.getLogger("ranger")
 logger.setLevel(logging.INFO)
 logger_aseba = logging.getLogger("ranger.aseba")
-logger_aseba.setLevel(logging.DEBUG)
+logger_aseba.setLevel(logging.INFO)
 
 console = ColorizingStreamHandler()
 console.setLevel(logging.DEBUG)
@@ -334,7 +334,7 @@ class Ranger(GenericRobot):
         self.state["touch_right"] = decompress_touch(msg[10])
 
         if with_encoders:
-            # "encoders" = [msg[12], msg[13], msg[14], msg[15]]
+            # "encoders" = [msg[13], msg[14], msg[15], msg[16]]
             self.odom.update(-msg[15], msg[13]) # left, right
             x,y,th,v,w = self.odom.get()
 
@@ -394,7 +394,7 @@ class Ranger(GenericRobot):
 
         if distance > 0: # may be zero in case of error (somewhere...)
             if id not in self.beacons:
-                self.beacons[id] = Beacon(id)
+                self.beacons[id] = Beacon(id, self)
 
             self.beacons[id].update(
                     distance = distance,
@@ -498,7 +498,7 @@ class Beacon:
         # orientation of the robot, in the beacon frame
         self.robot_theta = PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
 
-        if valid:
+        if self.valid:
             self.last_valid_pose = self.robot.pose.inframe([self.x,
                                                             self.y,
                                                             0,
