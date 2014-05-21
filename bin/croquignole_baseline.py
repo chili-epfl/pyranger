@@ -1,22 +1,14 @@
 #! /usr/bin/env python
 
 import logging
-from ranger.helpers.ansistrm import ColorizingStreamHandler
-toplogger = logging.getLogger("ranger")
-toplogger.setLevel(logging.INFO)
-#console = logging.StreamHandler()
-console = ColorizingStreamHandler()
-console.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
-console.setFormatter(formatter)
-toplogger.addHandler(console)
-
-logger = logging.getLogger("ranger.scenario")
 import time
 
-from ranger import get_robot
+from ranger import Ranger
 from ranger.res import ID, SOUNDS, PATTERNS
-from ranger.introspection import introspection
+from robots.introspection import introspection
+
+logger = logging.getLogger("ranger.scenario")
+logging.getLogger("ranger.aseba").setLevel(logging.DEBUG-1) # effectively silent aseba debug messages
 
 ##################################################################################
 ##################################################################################
@@ -24,7 +16,7 @@ from ranger.introspection import introspection
 ##################################################################################
 
 
-with get_robot(dummy = True) as robot:
+with Ranger(dummy = True) as robot:
 
     def on_lolette():
         logger.info("Lolette is back!")
@@ -70,7 +62,6 @@ with get_robot(dummy = True) as robot:
             if introspection:
                 introspection.ping()
     except KeyboardInterrupt:
-        robot.events.close()
-        robot.cancel_all()
+        pass
 
     logger.info("Byebye")
