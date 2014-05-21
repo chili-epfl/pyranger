@@ -1,6 +1,6 @@
-from robots.helpers.position import PoseManager, UnknownFrameError
+from robots.helpers.position import PoseManager, UnknownFrameError, InvalidFrameError
 
-from ranger.res import ID # list of R&B ids known to the system
+from ranger.res import ID, MYSTATION # list of R&B ids known to the system
 
 class RangerPoseManager(PoseManager):
 
@@ -28,16 +28,25 @@ class RangerPoseManager(PoseManager):
                         "map")
 
         elif isinstance(frame, int) and frame in ID.values():
+
+            if frame == MYSTATION:
+                # the charging station is the origin of the map
+                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
             try:
                 beacon = self.robot.beacons[frame]
             except KeyError:
                 raise UnknownFrameError("Beacon %s never seen" % frame)
 
             if beacon.obsolete():
-                raise UnknownFrameError("Beacon %s has obsolete position (not seen since long time)" % frame)
+                raise InvalidFrameError("Beacon %s has obsolete position (not seen since long time)" % frame)
+
+            if not beacon.valid:
+                raise InvalidFrameError("Beacon %s has invalid position (out of sight or too close)" % frame)
+
 
             return self.inframe(
-                    [beacon.x, beacon.y, 0.0, 0.0, 0.0, beacon.phi, "base_link"],
+                    [beacon.x, beacon.y, 0.0, 0.0, 0.0, beacon.beacon_theta, "base_link"],
                     "map")
 
         raise UnknownFrameError("Frame %s does not exist." % frame)

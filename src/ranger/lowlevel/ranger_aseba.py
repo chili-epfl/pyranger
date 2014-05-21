@@ -466,34 +466,32 @@ class Beacon:
         #  - distance == 6.128m, correspond to beacon out of sight
         #  - reverse_distance < 1m (reverse angle readings not meaningful if
         #  too close)
+        #  - more or less facing the beacon (< ~25°)
 
 
         self.valid =    distance < 6.168 \
-                    and reverse_distance > 1.0 
+                    and reverse_distance > 1.0 \
+                    and abs(angle) < 0.43
 
-        if self.valid:
-            self.r = reverse_distance
-            self.dist = distance
+        self.r = reverse_distance
+        self.dist = distance
 
 
-            self.theta = reverse_angle
+        self.theta = reverse_angle
 
-            # angle at which the beacon is seen by the robot's RaB
-            self.phi = angle
+        # angle at which the beacon is seen by the robot's RaB
+        self.phi = angle
 
-            # beacon cartesian coordinates, *relative to the robot frame!*
-            self.x = math.cos(self.phi) * self.r
-            self.y = math.sin(self.phi) * self.r
+        # beacon cartesian coordinates, *relative to the robot frame!*
+        self.x = math.cos(self.phi) * self.r
+        self.y = math.sin(self.phi) * self.r
+        self.beacon_theta = -PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
 
-            # robot cartesian coordinates, *relative to the beacon frame!*
-            self.robot_x = math.cos(self.theta) * self.r
-            self.robot_y = math.sin(self.theta) * self.r
-            # orientation of the robot, in the beacon frame
-            self.robot_theta = PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
-        else:
-            self.r = self.dist = self.theta = None
-            self.phi = self.x = self.y = None
-            self.robot_x = self.robot_y = self.robot_theta = None
+        # robot cartesian coordinates, *relative to the beacon frame!*
+        self.robot_x = math.cos(self.theta) * self.r
+        self.robot_y = math.sin(self.theta) * self.r
+        # orientation of the robot, in the beacon frame
+        self.robot_theta = PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
 
     def obsolete(self):
         if time.time() - self.last_update > self.OBSOLETE_AFTER:
