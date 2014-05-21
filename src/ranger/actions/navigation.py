@@ -107,12 +107,34 @@ def move(robot, distance, v = 0.2, easing = True):
     :param distance: distance to move, in meters
     :param v: (default: 0.5) linear velocity
     """
+    last_speed = 0
+
+    # if the distance is small, it's useless to move too quickly
+    max_speed = max(0.05, min(abs(distance), abs(v)))
+
     try:
         initial_pose = robot.pose.myself()
-        #TODO: ease in/ease out
-        robot.speed(v=v if distance > 0 else -v)
 
-        while robot.pose.distance(initial_pose) < abs(distance):
+        while True:
+            total_distance = robot.pose.distance(initial_pose)
+            achieved = total_distance / abs(float(distance))
+            logger.debug("Moved {:.1f}m ({:.1f}% of target)".format(total_distance, achieved))
+
+            if achieved >= .95:
+                robot.speed(v=0)
+                return
+
+            if easing:
+                speed = eased_speed(max_speed, achieved)
+            else:
+                speed = max_speed
+ 
+            speed = speed if distance > 0 else -speed
+
+            if speed != last_speed:
+                robot.speed(v=speed)
+                last_speed = speed
+
             time.sleep(0.1)
 
     except ActionCancelled:
