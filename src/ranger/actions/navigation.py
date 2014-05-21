@@ -82,16 +82,24 @@ def face(robot, pose, w = 0.5, backwards = False):
         if backwards:
             angle = robot.pose.normalize_angle(angle + math.pi)
 
+        logger.debug("Need to turn by %s° to face %s" % (180./math.pi*angle, pose))
         robot.turn(angle, w).result()
 
     except ActionCancelled:
         logger.debug("Action 'face' successfully cancelled.")
         # nothing more to do since the 'turn' sub-action takes care of setting the speed to 0
 
+def eased_speed(max_speed, achieved):
+    #TODO: proper ease in/ease out
+    if achieved > 0.8:
+        return max_speed * 0.5
+    else:
+        return max_speed
+
 
 @action
 @lock(WHEELS)
-def move(robot, distance, v = 0.1):
+def move(robot, distance, v = 0.2, easing = True):
     """ Move forward (or backward if distance is negative) of a given distance.
 
     DO NOT CHECK FOR COLLISIONS!
@@ -112,41 +120,44 @@ def move(robot, distance, v = 0.1):
     finally:
         robot.speed(0)
 
-def eased_speed(max_speed, achieved):
-    #TODO: proper ease in/ease out
-    if achieved > 0.8:
-        return max_speed * 0.5
-    else:
-        return max_speed
-
-
 @action
 @lock(WHEELS)
-def turn(robot, angle, w = 0.5):
+def turn(robot, angle, w = 0.5, easing = True):
     """ Turns of a given angle.
 
     DO NOT CHECK FOR COLLISIONS!
 
-    :param angle: angle to turn, in radians
+    :param angle: angle to turn, in radians. Taken as it is (ie, no angle % 2.pi occurs).
     :param w: (default: 0.5) rotation velocity
     """
-    theta0 = robot.state.theta
+    last_theta = robot.state.theta
+    total_rotation = 0
+    last_speed = 0
 
     # if the angle is small, it's useless to turn too quickly
     max_speed = max(0.1, min(abs(angle), abs(w)))
 
-    def hasachieved():
-        return abs(robot.state.theta - theta0) / abs(angle)
-
     try:
         while True:
-            achieved = hasachieved()
+            dr = (robot.state.theta - last_theta) % math.pi
+            dr = dr if dr < math.pi/2 else dr - math.pi
+            total_rotation += dr
+            achieved = total_rotation / float(angle)
+            logger.debug("Turned by {:.1f}rad ({:.1f}% of target)".format(total_rotation, achieved))
+
             if achieved > 0.95:
+                robot.speed(w=0)
                 return
 
-            speed = eased_speed(max_speed, achieved)
+            if easing:
+                speed = eased_speed(max_speed, achieved)
+            else:
+                speed = max_speed
+            speed = speed if angle > 0 else -speed
 
-            robot.speed(w = speed if angle > 0 else -speed)
+            if speed != last_speed:
+                robot.speed(w = speed)
+                last_speed = speed
 
             time.sleep(0.1)
 
