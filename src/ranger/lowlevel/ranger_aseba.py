@@ -36,8 +36,6 @@ from ranger.res import MYSTATION
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
-RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
-
 BATTERY_LOW_THRESHOLD = 7200 #mV
 
 def clamp(val, vmin, vmax):
@@ -110,10 +108,6 @@ class Ranger(GenericRobot):
             logger.error("One of the Ranger Aseba node is not up!!")
             logger.error("List of active nodes: {0}".format(nodes))
             raise Exception("Missing Aseba node")
-
-        # (Re-)load the aesl scripts, mandatory for Aseba to know about
-        # the list of available events
-        self.aseba.load_scripts(RANGER_ASEBA_SCRIPT)
 
         # Register callbacks for the main events of the 3 nodes
         self.aseba.on_event("mainFeedbackWithEncoders", self._process_main_feedback)
