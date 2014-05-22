@@ -30,10 +30,11 @@ def dock_for_charging(robot):
             placement.cancel()
             return
 
-        approach = robot.move(-0.6, v=0.03)
-        robot.on("charging", value = True).do(approach.cancel)
-
         try:
+            approach = robot.move(-0.4, v=0.1).wait()
+            approach = robot.move(-0.4, v=0.03)
+            robot.on("charging", value = True).do(approach.cancel)
+
             approach.wait()
         except ActionCancelled:
             approach.cancel()
@@ -55,6 +56,21 @@ def undock(robot):
         pass
 
 @action
+def sweep(robot):
+
+    try:
+
+        robot.sneak_in()
+
+        robot.turn(-math.pi / 4).wait()
+        robot.turn(math.pi / 2).wait()
+        robot.turn(-math.pi / 2).wait()
+        robot.turn(math.pi / 4).wait()
+
+    except ActionCancelled:
+        pass
+
+@action
 def look_for_beacon(robot, beacon_id):
 
     def isseen():
@@ -64,49 +80,62 @@ def look_for_beacon(robot, beacon_id):
                 return True
         return False
 
-    if isseen(): return True
-
-    sneakin = None
-    turning = None
     try:
-        initial_orientation = robot.state.theta
-
-        sneakin = robot.sneak_in()
-
-        turning = robot.turn(-math.pi / 4)
-        turning.wait()
-
-        for i in range(3):
-            if isseen(): break
-            turning = robot.turn(math.pi / 2)
-            turning.wait()
-            if isseen(): break
-            turning = robot.turn(-math.pi / 2)
-            turning.wait()
-
-
-        turning = robot.turn(robot.pose.angular_distance(robot.state.theta, initial_orientation))
-
-        sneakin.cancel()
-
-        turning.wait()
-
-
+        # already in sight? simply face it
         if isseen():
             logger.info("Beacon %s seen." % beacon_id)
+            robot.face(beacon_id).wait()
             return True
-        else:
-            logger.warning("Beacon %s not found." % beacon_id)
-            return False
     except ActionCancelled:
-        if turning:
-            turning.cancel()
-        robot.speed(0)
-        if sneakin:
-            sneakin.cancel()
+        return True
+
+    try:
+        # if a previous valid position is known, face it to start
+        if beacon_id in robot.beacons and \
+            not robot.beacons[beacon_id].obsolete() \
+            and robot.beacons[beacon_id].last_valid_pose:
+                robot.face(beacon_id)
+    except ActionCancelled:
         return False
 
+
+
+
+    sweep = None
+    try:
+
+        while True:
+            sweep = robot.sweep()
+            while not sweep.done():
+                if isseen():
+                    logger.info("Beacon %s seen." % beacon_id)
+                    sweep.cancel()
+                    robot.face(beacon_id).wait()
+                    robot.openeyes()
+                    robot.blink().wait()
+                    return True
+
+            logger.warning("Beacon %s not yet found :-(" % beacon_id)
+            robot.turn(math.pi/2)
+
+    except ActionCancelled:
+        sweep.cancel()
+        return False
+
+
 @action
+def track_beacon(robot, beacon_id):
+
+    try:
+        while True:
+            robot.look_for_beacon(beacon_id).wait()
+            robot.sleep(0.3)
+    except ActionCancelled:
+        pass
+
+
+@action
+@lock(WHEELS)
 def face(robot, pose, w = 0.5, backwards = False):
     """ Rotates the robot to face a given target point.
 
@@ -127,14 +156,17 @@ def face(robot, pose, w = 0.5, backwards = False):
             logger.debug("Already facing %s. Fine." % pose)
             return
 
-        logger.debug("Need to turn by {:.1f}° to face {:s}".format(180./math.pi*angle, pose))
-        robot.turn(angle, w).result()
+        logger.debug("Need to turn by {:.1f}° to face {}".format(180./math.pi*angle, pose))
+
+        with WHEELS:
+            robot.turn(angle, w).result()
 
     except ActionCancelled:
         logger.debug("Action 'face' successfully cancelled.")
         # nothing more to do since the 'turn' sub-action takes care of setting the speed to 0
 
 @action
+@lock(WHEELS)
 def orient(robot, pose):
     """ Set the robot orientation so that it aligns with the given
     pose orientation.
@@ -150,7 +182,9 @@ def orient(robot, pose):
 
             logger.debug("Need to turn by {:.1f}° to reach expected orientation".format(180./math.pi*rz))
 
-        robot.turn(rz)
+        with WHEELS:
+            robot.turn(rz).wait()
+
     except ActionCancelled:
         # nothing more to do since the 'turn' sub-action takes care of setting the speed to 0
         pass
@@ -281,10 +315,9 @@ def goto(robot,
     """
 
     try:
-        if robot.state.charging:
-            # undock first!
-            with WHEELS:
-                robot.undock().wait()
+        # undock first!
+        with WHEELS:
+            robot.undock().wait()
 
         with WHEELS:
             action = robot.face(pose, w)
@@ -337,6 +370,16 @@ def goto(robot,
         logger.warning("Goto action cancelled. Stopping here.")
     finally:
         robot.speed(0)
+
+@action
+@lock(WHEELS)
+def goto_beacon(robot, beacon):
+
+    with WHEELS:
+        robot.undock().wait()
+
+        robot.look_for_beacon()
+
 
 @action
 def resolve_collision(robot):
