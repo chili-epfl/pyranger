@@ -1,7 +1,7 @@
 import logging; logger = logging.getLogger("ranger.navigation")
 
 import time, math
-from random import uniform as rand
+from random import uniform as rand, choice
 from robots.decorators import action, lock
 from robots.signals import ActionCancelled
 from ranger.res import *
@@ -27,17 +27,14 @@ def dock_for_charging(robot):
         try:
             placement.wait()
         except ActionCancelled:
-            placement.cancel()
             return
 
         try:
-            approach = robot.move(-0.4, v=0.1).wait()
-            approach = robot.move(-0.4, v=0.03)
+            approach = robot.move(-0.4, v=0.05)
             robot.on("charging", value = True).do(approach.cancel)
 
             approach.wait()
         except ActionCancelled:
-            approach.cancel()
             return
 
         logger.info("Successfully docked on the charging station!")
@@ -64,8 +61,7 @@ def sweep(robot):
 
         robot.turn(-math.pi / 4).wait()
         robot.turn(math.pi / 2).wait()
-        robot.turn(-math.pi / 2).wait()
-        robot.turn(math.pi / 4).wait()
+        robot.turn(-math.pi / 4).wait()
 
     except ActionCancelled:
         pass
@@ -99,7 +95,7 @@ def look_for_beacon(robot, beacon_id):
         return False
 
 
-
+    rotation_direction = choice([-0.8, -1.2, 0.8, 1.2])
 
     sweep = None
     try:
@@ -116,10 +112,9 @@ def look_for_beacon(robot, beacon_id):
                     return True
 
             logger.warning("Beacon %s not yet found :-(" % beacon_id)
-            robot.turn(math.pi/2)
+            robot.turn(rotation_direction * 2/3 * math.pi)
 
     except ActionCancelled:
-        sweep.cancel()
         return False
 
 
@@ -162,8 +157,7 @@ def face(robot, pose, w = 0.5, backwards = False):
             robot.turn(angle, w).result()
 
     except ActionCancelled:
-        logger.debug("Action 'face' successfully cancelled.")
-        # nothing more to do since the 'turn' sub-action takes care of setting the speed to 0
+        pass
 
 @action
 @lock(WHEELS)
@@ -186,7 +180,6 @@ def orient(robot, pose):
             robot.turn(rz).wait()
 
     except ActionCancelled:
-        # nothing more to do since the 'turn' sub-action takes care of setting the speed to 0
         pass
 
 def eased_speed(max_speed, achieved):
@@ -235,11 +228,9 @@ def move(robot, distance, v = 0.2, easing = True):
                 robot.speed(v=speed)
                 last_speed = speed
 
-            time.sleep(0.1)
+            robot.sleep(0.1)
 
     except ActionCancelled:
-        logger.debug("Action 'move' successfully cancelled.")
-    finally:
         robot.speed(0)
 
 @action
@@ -252,6 +243,11 @@ def turn(robot, angle, w = 0.5, easing = True):
     :param angle: angle to turn, in radians. Taken as it is (ie, no angle % 2.pi occurs).
     :param w: (default: 0.5) rotation velocity
     """
+
+    if abs(angle) < 0.02:
+        logger.info("Rotation angle < 1°: skipping it")
+        return
+
     last_theta = robot.state.theta
     total_rotation = 0
     last_speed = 0
@@ -284,8 +280,6 @@ def turn(robot, angle, w = 0.5, easing = True):
             time.sleep(0.1)
 
     except ActionCancelled:
-        logger.debug("Action 'turn' successfully cancelled.")
-    finally:
         robot.speed(0)
 
 
@@ -317,15 +311,18 @@ def goto(robot,
     try:
         # undock first!
         with WHEELS:
+            logger.debug("goto: undock")
             robot.undock().wait()
 
         with WHEELS:
+            logger.debug("goto: face target")
             action = robot.face(pose, w)
             #waits until the robot faces the destination
             action.result()
 
         distance = robot.pose.distance(pose)
         with WHEELS:
+            logger.debug("goto: start moving towards target")
             motion = robot.move(distance, v)
 
             prev_dist = distance
@@ -339,14 +336,14 @@ def goto(robot,
                     break
 
                 if abs(angle) > epsilon2:
-                    logger.debug("Correcting heading a bit...")
+                    logger.debug("goto: Correcting heading a bit...")
                     motion.cancel()
                     robot.turn(angle, w).wait()
                     motion = robot.move(dist, v)
 
                 if dist > prev_dist: # we are not getting closer anymore!
 
-                    logger.warning("Missed! Trying to face again my target...")
+                    logger.info("goto: Target missed! Trying to face again my target...")
                     motion.cancel()
                     robot.turn(angle, w).wait()
                     motion = robot.move(dist, v)
