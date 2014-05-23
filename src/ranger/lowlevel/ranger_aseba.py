@@ -38,6 +38,9 @@ MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
 BATTERY_LOW_THRESHOLD = 7200 #mV
 
+# Required to access the list of events
+RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
+
 def clamp(val, vmin, vmax):
     return max(vmin, min(vmax, val))
 
@@ -101,6 +104,8 @@ class Ranger(GenericRobot):
 
         # init Aseba
         self.aseba = Aseba(dummy = dummy)
+
+        self.aseba.load_events_list(RANGER_ASEBA_SCRIPT)
 
         # Basic check to be sure all the Ranger's ASEBA nodes are up and running
         nodes = self.aseba.get_nodes_list()
@@ -348,7 +353,7 @@ class Ranger(GenericRobot):
         self.state["motor_current_left"] = msg[14 if not with_encoders else 18]
         self.state["motor_current_right"] = msg[15 if not with_encoders else 19]
 
-        self.state["freq_main"] = self.aseba.events_freq["mainFeedbackWithEncoders"]
+        self.state["freq_main"] = self.aseba.get_event_frequency("mainFeedbackWithEncoders")
 
         # notify the update
         self.main_update.set()
@@ -362,7 +367,7 @@ class Ranger(GenericRobot):
         self.state["lolette"] = msg[3]
 
 
-        self.state["freq_neuil"] = self.aseba.events_freq["neuilFeedback"]
+        self.state["freq_neuil"] = self.aseba.get_event_frequency("neuilFeedback")
 
         # notify the update
         self.neuil_update.set()
@@ -396,7 +401,7 @@ class Ranger(GenericRobot):
                     reverse_distance = reverse_distance,
                     reverse_angle = reverse_angle)
 
-            self.state["freq_rab"] = self.aseba.events_freq["receiverFeedback"]
+            self.state["freq_rab"] = self.aseba.get_event_frequency("receiverFeedback")
 
             # notify the update
             self.rab_update.set()
