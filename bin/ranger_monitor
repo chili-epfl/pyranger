@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-import logging;logger = logging.getLogger("ranger")
-logger.addHandler(logging.NullHandler())
-
-
+import logging
 import sys
 import time
 import math
 
-from ranger.lowlevel.ranger_aseba import Ranger, BATTERY_LOW_THRESHOLD
+from ranger.lowlevel.ranger_aseba import Ranger, BATTERY_LOW_THRESHOLD, logger
+
+logger.addHandler(logging.NullHandler())
+
 from ranger.res import ID
 from ranger.helpers.plot import XYPlot
 
@@ -36,7 +35,7 @@ neuil_msg = [0.12, 1.03, 0.03,
 class Monitor:
 
     def __init__(self, silent = False, showtraj = False):
-        self.robot = Ranger()
+        self.robot = Ranger(default_logging=False)
 
         self.showtraj = showtraj
         # used for debugging purposes (-> if set to true, no ANSI sequence -> no mess with debug msgs)

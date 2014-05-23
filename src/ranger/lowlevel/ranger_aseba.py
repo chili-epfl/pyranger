@@ -1,26 +1,12 @@
 import logging
-from robots.helpers.ansistrm import ColorizingStreamHandler
 
 logger = logging.getLogger("ranger")
-logger.setLevel(logging.INFO)
 logger_aseba = logging.getLogger("ranger.aseba")
-logger_aseba.setLevel(logging.INFO)
-
-console = ColorizingStreamHandler()
-console.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
-console.setFormatter(formatter)
-logger.addHandler(console)
-logger_aseba.addHandler(console)
-
 
 
 import math, time
 
 import threading # for threading.Condition
-
-robotlogger = logging.getLogger("robots")
-robotlogger.addHandler(console)
 
 from robots import GenericRobot
 
@@ -40,6 +26,24 @@ BATTERY_LOW_THRESHOLD = 7200 #mV
 
 # Required to access the list of events
 RANGER_ASEBA_SCRIPT = "/home/lemaigna/src/ranger2/aseba/RangerMain.aesl"
+
+def configure_logging():
+
+    from robots.helpers.ansistrm import ConcurrentColorizingStreamHandler
+
+    logger.setLevel(logging.INFO)
+    logger_aseba.setLevel(logging.INFO)
+
+    console = ConcurrentColorizingStreamHandler()
+    console.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
+    console.setFormatter(formatter)
+    logger.addHandler(console)
+    logger_aseba.addHandler(console)
+
+    robotlogger = logging.getLogger("robots")
+    robotlogger.addHandler(console)
+
 
 def clamp(val, vmin, vmax):
     return max(vmin, min(vmax, val))
@@ -82,7 +86,10 @@ class Ranger(GenericRobot):
         "eyelids":              None   # state of the eyelids (open, half-open or closed)
         }
 
-    def __init__(self, dummy = False, immediate = False):
+    def __init__(self, dummy = False, immediate = False, default_logging=True):
+
+        if default_logging:
+            configure_logging()
 
         super(Ranger, self).__init__(actions = ["ranger.actions"], 
                                     dummy = dummy,
