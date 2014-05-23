@@ -365,18 +365,47 @@ def goto(robot,
 
     except ActionCancelled:
         logger.warning("Goto action cancelled. Stopping here.")
-    finally:
         robot.speed(0)
 
 @action
 @lock(WHEELS)
-def goto_beacon(robot, beacon):
+def goto_beacon(robot, beacon_id):
 
-    with WHEELS:
-        robot.undock().wait()
+    try:
+        with WHEELS:
+            robot.undock().wait()
 
-        robot.look_for_beacon()
+            robot.look_for_beacon(beacon_id).wait()
 
+            if robot.pose.distance(beacon_id) > 1:
+                motion = robot.goto(beacon_id,
+                                    distance_to_target = 1,
+                                    ignore_orientation = True)
+
+                while not motion.done():
+                    robot.sleep(0.5)
+                    if robot.pose.distance(beacon_id) > 1.5 and not robot.beacons[beacon_id].valid:
+                        logger.warning("Target beacon lost! Moved maybe? let look for it.")
+                        motion.cancel()
+                        robot.look_for_beacon(beacon_id).wait()
+                        motion = robot.goto(beacon_id,
+                                    distance_to_target = 1,
+                                    ignore_orientation = True)
+
+
+            # custom servoing for final approach
+            # (since the beacon angle reading is not valid)
+            approach = robot.move(0.6, v=0.05)
+
+            while not approach.done():
+                distance = robot.beacons[beacon_id].r
+                logger.debug("Beacon %s seen at %.2fm" % (beacon_id, distance))
+                robot.sleep(0.1)
+                if distance < 0.3:
+                    approach.cancel()
+
+    except ActionCancelled:
+        pass
 
 @action
 def resolve_collision(robot):
