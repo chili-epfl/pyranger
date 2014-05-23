@@ -152,6 +152,7 @@ class Ranger(GenericRobot):
         self.aseba.close()
         super(Ranger, self).close()
 
+
     def lefteye(self, x, y):
         """
         Move the pupil of the left eye
@@ -424,6 +425,12 @@ class Ranger(GenericRobot):
             logger_aseba.debug("Event %s(%s) sent." % (id, str(args)))
         self.aseba.send_event(id, args)
 
+
+# Limit value to consider a reading as valid
+# ID: [min_dist, max_dist, min_angle, max_angle]
+BEACONS_MODEL = {16: [1.0, 6.168, -0.43, 0.43],
+                 20: [0.1, 6.168, -0.43, 0.43]}
+
 class Beacon:
     """
 
@@ -454,8 +461,22 @@ class Beacon:
         self.last_update = time.time()
 
         self.id = id
+
+        if self.id not in BEACONS_MODEL:
+            logger.warning("No model available for beacon %s" % self.id)
+
         self.valid = False
         self.last_valid_pose = None
+
+    def checkvalid(self, distance, angle):
+        if self.id not in BEACONS_MODEL:
+            return True
+
+        min_dist, max_dist, min_angle, max_angle = BEACONS_MODEL[self.id]
+
+        return True if min_dist < distance < max_dist and \
+                       min_angle < angle < max_angle \
+                    else False
 
     def update(self, distance, angle, 
                      reverse_distance, reverse_angle):
@@ -480,18 +501,16 @@ class Beacon:
         #  - more or less facing the beacon (< ~25°)
 
 
-        self.valid =    distance < 6.168 \
-                    and reverse_distance > 1.0 \
-                    and abs(angle) < 0.43
+        self.valid = self.checkvalid(reverse_distance, angle)
 
         self.r = reverse_distance
         self.dist = distance
 
 
-        self.theta = reverse_angle
+        self.theta = PoseManager.normalize_angle(reverse_angle)
 
         # angle at which the beacon is seen by the robot's RaB
-        self.phi = angle
+        self.phi = PoseManager.normalize_angle(angle)
 
         # beacon cartesian coordinates, *relative to the robot frame!*
         self.x = math.cos(self.phi) * self.r
