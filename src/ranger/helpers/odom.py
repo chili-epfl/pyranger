@@ -49,9 +49,9 @@ import time
 from math import sin, cos, pi
 
 RANGER_WHEEL_RADIUS = 0.053 #m
-RANGER_WHEEL_BASE = 0.3 #m
+RANGER_WHEEL_BASE = 0.301 #m
 
-TICKS_360 = 43291 # The number of wheel encoder ticks per complete wheel turn
+TICKS_360 = 43950 # The number of wheel encoder ticks per complete wheel turn
 
 
 ENCODER_MIN = -32768
