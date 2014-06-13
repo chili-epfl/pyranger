@@ -24,17 +24,17 @@ PATTERNS = dict(toy_in = 1,
                 toy_out = 2)
 
 # Range and Bearing IDs (the string is actually the frame name)
-ID = enum(BEACON = 20,
-          ROBOT1 = 10,
-          ROBOT2 = 11,
-          ROBOT3 = 12,
-          ROBOT4 = 13,
-          ROBOT5 = 14,
-          STATION1 = 15,
-          STATION2 = 16,
-          STATION3 = 17,
-          STATION4 = 18,
-          STATION5 = 19)
+ID = enum(BEACON = "rab_20",
+          ROBOT1 = "rab_10",
+          ROBOT2 = "rab_11",
+          ROBOT3 = "rab_12",
+          ROBOT4 = "rab_13",
+          ROBOT5 = "rab_14",
+          STATION1 = "rab_15",
+          STATION2 = "rab_16",
+          STATION3 = "rab_17",
+          STATION4 = "rab_18",
+          STATION5 = "rab_19")
 
 MYSTATION = ID.STATION2 # TODO multirobot
 

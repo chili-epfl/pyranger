@@ -403,9 +403,9 @@ class Ranger(GenericRobot):
 
         if distance > 0: # may be zero in case of error (somewhere...)
             if id not in self.beacons:
-                self.beacons[id] = Beacon(id, self)
+                self.beacons["rab_%s" % id] = Beacon(id, self)
 
-            self.beacons[id].update(
+            self.beacons["rab_%s" % id].update(
                     distance = distance,
                     angle = angle,
                     reverse_distance = reverse_distance,

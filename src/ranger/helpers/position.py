@@ -21,7 +21,7 @@ class RangerPoseManager(PoseManager):
 
             if frame == "map" or frame == "station":
                 # the charging station is the origin of the map
-                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                return {frame:"map"}
 
             if frame == "eyes_link":
                 # position of the (middle of) the eyes
@@ -29,11 +29,9 @@ class RangerPoseManager(PoseManager):
                         [0.2, 0.0, 0.2, 0.0, 0.0, 0.0, "base_link"],
                         "map")
 
-        elif isinstance(frame, int) and frame in ID.values():
-
             if frame == MYSTATION:
                 # the charging station is the origin of the map
-                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                return {frame:"map"}
 
             try:
                 beacon = self.robot.beacons[frame]
