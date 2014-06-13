@@ -10,6 +10,7 @@ import threading # for threading.Condition
 
 from robots import GenericRobot
 
+from robots.mw import ROS
 from robots.helpers.helpers import enum
 from robots.helpers.position import PoseManager # for normalize_angle
 from robots.introspection import introspection
@@ -92,6 +93,7 @@ class Ranger(GenericRobot):
             configure_logging()
 
         super(Ranger, self).__init__(actions = ["ranger.actions"], 
+                                    supports = ROS,
                                     dummy = dummy,
                                     immediate = immediate)
 
