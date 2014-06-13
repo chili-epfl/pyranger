@@ -4,6 +4,7 @@ import time, math
 from random import uniform as rand, choice
 from robots.decorators import action, lock
 from robots.signals import ActionCancelled
+from robots.mw import ROS
 from ranger.res import *
 
 EPSILON_RAD = 0.05
@@ -22,22 +23,43 @@ def dock_for_charging(robot):
         return
 
     with WHEELS:
-        placement = robot.goto([0.5, 0, 0, 0, 0, 0, "station"])
-
         try:
-            placement.wait()
-        except ActionCancelled:
-            return
+            # first, face the station
+            placement = robot.goto([1.1, 0, 0, 0, 0, 1, 0, MYSTATION])
+            success = placement.result()
 
-        try:
-            approach = robot.move(-0.4, v=0.05)
+            if not success:
+                # TODO: recovery behaviour?
+                logger.error("I can not reach my station!! I need some help")
+                return
+
+
+            # then, make sure we actually face the charging station
+            # + U turn
+            station = robot.beacons[MYSTATION]
+            if not station.valid:
+                # TODO: recovery behaviour?
+                logger.error("I do not see my station!! I'm lost :-(")
+                return
+
+            delta_y = station.robot_y
+            logger.info("Adjusting my position. Need to strafe %.2fm..." % delta_y)
+            robot.goto([0.2, delta_y, 0, 0, 0, 1, 0, "base_link"]).wait()
+
+            logger.info("Trying now to dock...")
+            # finally, careful backward drive
+            approach = robot.move(-0.7, v=0.05)
             robot.on("charging", value = True).do(approach.cancel)
 
             approach.wait()
+            
+            if robot.state.charging:
+                logger.info("Successfully docked on the charging station!")
+            else:
+                logger.error("Docking on the charging station failed!")
         except ActionCancelled:
             return
 
-        logger.info("Successfully docked on the charging station!")
 
 @action
 @lock(WHEELS)
@@ -285,6 +307,58 @@ def turn(robot, angle, w = 0.5, easing = True):
 
 @action
 @lock(WHEELS)
+def goto_ros(robot, pose):
+
+    pose = robot.pose.inframe(pose, "map")
+
+    import rospy
+    import actionlib
+    from actionlib_msgs.msg import GoalStatus
+    import move_base_msgs.msg
+
+    # Creates the SimpleActionClient, passing the type of the action
+    # (Navigationction) to the constructor.
+    client = actionlib.SimpleActionClient('move_base', move_base_msgs.msg.MoveBaseAction)
+
+    ok = client.wait_for_server()
+    if not ok:
+        logger.error("Could not connect to the ROS move_base node! Aborting action")
+        return
+
+    # Creates a goal to send to the action server.
+    goal = move_base_msgs.msg.MoveBaseGoal()
+
+    # Definition of the goal
+    goal.target_pose.header.frame_id = pose['frame']
+    goal.target_pose.header.stamp = rospy.Time.now();
+
+    goal.target_pose.pose.position.x = pose['x']
+    goal.target_pose.pose.position.y = pose['y']
+    goal.target_pose.pose.position.z = 0
+
+    goal.target_pose.pose.orientation.x = 0
+    goal.target_pose.pose.orientation.y = 0
+    goal.target_pose.pose.orientation.z = pose['qz']
+    goal.target_pose.pose.orientation.w = pose['qw']
+
+    try:
+        logger.debug("Sending move_base goal: %s" % goal)
+        client.send_goal_and_wait(goal)
+
+        state = client.get_state()
+        if state == GoalStatus.SUCCEEDED:
+            logger.info("Goal reached!")
+            return True
+        else:
+            logger.warning("Move action failed: %s", client.get_goal_status_text())
+            return False
+
+    except ActionCancelled:
+        client.cancel_goal()
+        return False
+
+@action
+@lock(WHEELS)
 def goto(robot, 
         pose, 
         v = 0.2, w = 0.5, 
@@ -314,58 +388,14 @@ def goto(robot,
             logger.debug("goto: undock")
             robot.undock().wait()
 
-        with WHEELS:
-            logger.debug("goto: face target")
-            action = robot.face(pose, w)
-            #waits until the robot faces the destination
-            action.result()
-
-        distance = robot.pose.distance(pose)
-        with WHEELS:
-            logger.debug("goto: start moving towards target")
-            motion = robot.move(distance, v)
-
-            prev_dist = distance
-            while True:
-                dist = robot.pose.distance(pose)
-                angle, _ = robot.pose.pantilt(pose)
-
-                if dist < epsilon + distance_to_target:
-                    motion.cancel()
-                    logger.info("Reached target")
-                    break
-
-                if abs(angle) > epsilon2:
-                    logger.debug("goto: Correcting heading a bit...")
-                    motion.cancel()
-                    robot.turn(angle, w).wait()
-                    motion = robot.move(dist, v)
-
-                if dist > prev_dist: # we are not getting closer anymore!
-
-                    logger.info("goto: Target missed! Trying to face again my target...")
-                    motion.cancel()
-                    robot.turn(angle, w).wait()
-                    motion = robot.move(dist, v)
-
-
-                #if robot.state.bumper:
-                #    logger.warning("Bumped into something!")
-                #    robot.speed(0)
-                #    with WHEELS:
-                #        robot.resolve_collision().result()
-                #        face(pose, w, backwards = backwards).result()
-                #    robot.speed(v = v if not backwards else -v)
-
-                prev_dist = dist
-                time.sleep(0.1)
-
-            if not ignore_orientation:
-                robot.orient(pose).wait()
+            if robot.supports(ROS):
+                motion = robot.goto_ros(pose)
+                return motion.result()
 
     except ActionCancelled:
         logger.warning("Goto action cancelled. Stopping here.")
         robot.speed(0)
+        return False
 
 @action
 @lock(WHEELS)
