@@ -239,11 +239,18 @@ class Ranger(GenericRobot):
                 self.rightlid(lids)
                 left_lid = lids
                 right_lid = lids
+
+            self.state["eyelids"] = (left_lid, right_lid)
+
         else:
-            self.leftlid(left_lid)
-            self.rightlid(right_lid)
-        
-        self.state["eyelids"] = (left_lid, right_lid)
+            if left_lid is not None:
+                self.leftlid(left_lid)
+                self.state["eyelids"] = (left_lid, self.state["eyelids"][1])
+            if right_lid is not None:
+                self.rightlid(right_lid)
+                self.state["eyelids"] = (self.state["eyelids"][0], right_lid)
+
+
 
     def led_pattern(self, pattern_id, repeat = False):
         self._send_evt("playLedVid", pattern_id, repeat)
