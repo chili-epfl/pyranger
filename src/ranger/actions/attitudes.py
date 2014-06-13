@@ -73,14 +73,17 @@ def curious(robot):
 
 @action
 @lock(LIDS)
-def blink(robot):
+def blink(robot, nb = 1):
 
     try:
         llid, rlid = robot.state.eyelids
-        robot.eyes(lids = Ranger.eyelids.CLOSED)
-        robot.sleep(rand(0.2, 0.3))
-        robot.eyes(left_lid = llid,
-                   right_lid = rlid)
+
+        for i in range(nb):
+            robot.eyes(lids = Ranger.eyelids.CLOSED)
+            robot.sleep(rand(0.2, 0.3))
+            robot.eyes(left_lid = llid,
+                    right_lid = rlid)
+            robot.sleep(rand(0.2, 0.3))
     except ActionCancelled:
         robot.eyes(lids = Ranger.eyelids.OPEN)
 
@@ -105,6 +108,31 @@ def background_blink(robot, focused = False):
 
     except ActionCancelled:
         pass
+
+@action
+@lock(EYES)
+def lost(robot):
+
+    try:
+        for i in range(3):
+            robot.eyes(rand_in([(90,90), (50, 90), (-90, 90), (-90, -90), (90, -90), (0, 90), (90, 0), (50, -50), (-50, 20)]))
+            robot.sleep(rand(0.6, 1.2))
+            with EYES:
+                robot.blink(rand_in([1,2]))
+
+        while True:
+            robot.eyes((0, -70))
+            robot.sleep(rand(2,5))
+            robot.eyes(rand_in([(90,90), (50, 90), (-90, 90), (-90, -90), (90, -90), (0, 90), (90, 0), (50, -50), (-50, 20)]))
+            robot.sleep(rand(1.6, 2))
+            with EYES:
+                robot.blink(rand_in([1,2]))
+
+
+    except ActionCancelled:
+        robot.eyes((0, 0))
+        robot.eyes(lids = Ranger.eyelids.OPEN)
+
 
 @action
 @lock(LIDS)
