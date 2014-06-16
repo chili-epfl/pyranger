@@ -1,14 +1,24 @@
-import pyaudio
+nosound = False
+try:
+    import pyaudio
+except ImportError:
+    print("pyaudio, the Python port of the PortAudio library, is not available on your system. I won't play sounds!")
+    nosound = True
 import wave
 import sys
 
 
 class WavePlayer:
     def __init__(self):
+        if nosound:
+            return
+
         self.p = pyaudio.PyAudio()
         self.stream = None
 
     def play(self, filename):
+        if nosound:
+            return
 
         self.playing = True
         # length of data to read.
@@ -45,11 +55,17 @@ class WavePlayer:
         self.stream.close()    
 
     def stop(self):
+        if nosound:
+            return
+
         self.playing = False
         if self.stream:
             self.stream.close()
 
     def close(self):
+        if nosound:
+            return
+
         self.playing = False
         self.p.terminate()
 
