@@ -35,7 +35,7 @@ neuil_msg = [0.12, 1.03, 0.03,
 class Monitor:
 
     def __init__(self, silent = False, showtraj = False):
-        self.robot = Ranger(default_logging=False)
+        self.robot = Ranger(default_logging=False, with_ros = False)
 
         self.showtraj = showtraj
         # used for debugging purposes (-> if set to true, no ANSI sequence -> no mess with debug msgs)

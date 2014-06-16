@@ -23,6 +23,7 @@ from ranger.res import MYSTATION
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
+BATTERY_MAX_LEVEL = 8400 #mV
 BATTERY_LOW_THRESHOLD = 7200 #mV
 
 # Required to access the list of events
@@ -87,13 +88,13 @@ class Ranger(GenericRobot):
         "eyelids":              None   # state of the eyelids (open, half-open or closed)
         }
 
-    def __init__(self, dummy = False, immediate = False, default_logging=True):
+    def __init__(self, dummy = False, immediate = False, default_logging=True, with_ros = True):
 
         if default_logging:
             configure_logging()
 
         super(Ranger, self).__init__(actions = ["ranger.actions"], 
-                                    supports = ROS,
+                                    supports = ROS if with_ros else 0,
                                     dummy = dummy,
                                     immediate = immediate)
 
@@ -250,6 +251,15 @@ class Ranger(GenericRobot):
                 self.rightlid(right_lid)
                 self.state["eyelids"] = (self.state["eyelids"][0], right_lid)
 
+
+
+    def set_led(self, id, color):
+        r, g, b = color
+        self._send_evt("setLed", id, r, g, b)
+
+
+    def turn_off_leds(self):
+        self._send_evt("turnOffLeds")
 
 
     def led_pattern(self, pattern_id, repeat = False):
