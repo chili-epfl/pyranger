@@ -10,6 +10,7 @@ from ranger.res import *
 from ranger import Ranger # for eyelids constants
 
 @action
+@lock(EYES)
 def idle(robot):
 
     try:
@@ -27,6 +28,25 @@ def idle(robot):
 
 @action
 @lock(EYES)
+@lock(WHEELS)
+def active_wait(robot):
+
+    try:
+        while True:
+            with EYES:
+                robot.sneak_in()
+                robot.turn(rand(0.3, 0.7)).wait()
+                robot.sleep(1)
+                robot.turn(-2 * rand(0.3, 0.7)).wait()
+                robot.sleep(1)
+                robot.turn(rand(0.3, 0.7)).wait()
+            robot.sleep(rand(5,10))
+
+    except ActionCancelled:
+            robot.speed(0)
+
+@action
+@lock(EYES)
 def wakeup(robot):
 
     try:
@@ -41,6 +61,22 @@ def wakeup(robot):
     except ActionCancelled:
         robot.eyes(eyes = (0, 0),
                    lids = Ranger.eyelids.OPEN)
+
+@action
+@lock(EYES)
+def fall_asleep(robot):
+
+    try:
+        robot.eyes(left_lid = (rand(18, 25), rand(18,25)))
+        robot.sleep(rand(0.6, 0.7))
+        robot.eyes(right_lid = (rand(18, 25), rand(18,25)))
+        robot.sleep(rand(0.6, 0.7))
+        robot.eyes(lids = Ranger.eyelids.CLOSED)
+
+    except ActionCancelled:
+        robot.eyes(eyes = (0, 0),
+                   lids = Ranger.eyelids.OPEN)
+
 
 @action
 @lock(LIDS)
