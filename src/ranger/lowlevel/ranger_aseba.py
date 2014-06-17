@@ -297,15 +297,12 @@ class Ranger(GenericRobot):
 
         self._send_evt("setSpeed", l, r)
 
-    def wait_for_state_update(self, timeout = 2):
+    def wait_for_state_update(self, timeout = None):
         """
         TODO: Not too good... what is in general the semantic of 'wait_for_state'? seem to be very robot dependent...
         """
 
-        if self.main_update.wait(timeout) is None:
-            raise RuntimeError("'main' node does not transmit its state!! Check the connection to the aseba network.")
-
-        return
+        return self.main_update.wait(timeout)
 
     def loglevel(self, level):
         super(Ranger, self).loglevel(level)
