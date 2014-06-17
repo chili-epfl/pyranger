@@ -444,8 +444,10 @@ class Ranger(GenericRobot):
 
 # Limit value to consider a reading as valid
 # ID: [min_dist, max_dist, min_angle, max_angle]
-BEACONS_MODEL = {16: [1.0, 6.168, -0.43, 0.43],
+BEACONS_MODEL = {15: [1.0, 6.168, -0.43, 0.43],
+                 16: [1.0, 6.168, -0.43, 0.43],
                  20: [0.1, 6.168, -0.43, 0.43]}
+
 
 class Beacon:
     """
