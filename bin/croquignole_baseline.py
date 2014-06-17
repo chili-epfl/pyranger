@@ -16,24 +16,32 @@ logging.getLogger("ranger.aseba").setLevel(logging.DEBUG-1) # effectively silent
 #                             BASE LINE BEHAVIOUR
 ##################################################################################
 
+current_action = None
+blinking = None
 
 @action
 def on_lolette(robot):
     logger.info("Lolette is back!")
-    robot.cancel_all_others()
+
     robot.blink()
+
     dock_ok = robot.dock_for_charging().result()
     if dock_ok:
-        robot.closeeyes()
+        blinking.cancel()
+        robot.fall_asleep().wait()
+        robot.state["asleep"] = True
 
 @action
 def on_lolette_removed(robot):
     logger.info("Lolette removed!")
-    robot.cancel_all_others()
-    robot.openeyes()
+
+    if robot.state["asleep"]:
+        robot.state["asleep"] = False
+        robot.wakeup().wait()
 
     robot.goto([1.8, 2.2, 0, 0, 0,-0.05, 1]).wait()
     robot.blink(2)
+    robot.active_wait().wait()
     #beacon_found = False
     #while not beacon_found:
     #    beacon_found = robot.look_for_beacon(ID.BEACON).result()
@@ -52,21 +60,37 @@ def on_toy_removed(robot):
     robot.playsound(SOUNDS["toy_out"])
     robot.lightpattern(PATTERNS["toy_out"])
 
+class runner:
+    def __init__(self, fn):
+        self.fn = fn
+
+    def __call__(self, robot):
+        global current_action
+
+        if current_action:
+            current_action.cancel()
+
+        current_action = self.fn(robot)
 
 with Ranger() as robot:
 
     # Turn on DEBUG logging
     robot.debug()
 
+    robot.state["asleep"] = True
+
+    robot.show_battery()
+    blinking = robot.background_blink()
+
     logger.info("Ok! Let's start!")
     logger.info("Waiting for the lolette to be removed...")
-    robot.every("lolette", becomes = True).do(on_lolette)
-    robot.every("lolette", becomes = False).do(on_lolette_removed)
-    robot.every("scale", increase = 100).do(on_toy_added)
-    robot.every("scale", decrease = 100).do(on_toy_removed)
+    robot.every("lolette", becomes = True).do(runner(on_lolette))
+    robot.every("lolette", becomes = False).do(runner(on_lolette_removed))
+    robot.every("scale", increase = 0.1, max_firing_freq = 0.3).do(on_toy_added)
+    robot.every("scale", decrease = 0.1, max_firing_freq = 0.3).do(on_toy_removed)
 
     try:
-        while True:
+        while not robot.rosactions.is_shutdown():
             time.sleep(0.5)
 
             if introspection:
@@ -75,3 +99,4 @@ with Ranger() as robot:
         pass
 
     logger.info("Byebye")
+
