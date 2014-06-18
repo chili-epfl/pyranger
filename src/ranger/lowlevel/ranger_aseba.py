@@ -259,6 +259,19 @@ class Ranger(GenericRobot):
     def set_led(self, id, color):
         r, g, b = color
         self._send_evt("setLed", id, r, g, b)
+ 
+    def set_all_leds(self, color):
+        r, g, b = color
+        self._send_evt("setAllLeds", r, g, b)
+
+
+    def set_led_row(self, id, color):
+        r, g, b = color
+        self._send_evt("setLedsRow", id, r, g, b)
+
+    def set_led_col(self, id, color):
+        r, g, b = color
+        self._send_evt("setLedsCol", id, r, g, b)
 
 
     def turn_off_leds(self):
