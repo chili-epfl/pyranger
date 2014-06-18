@@ -16,6 +16,7 @@ from robots.helpers.position import PoseManager # for normalize_angle
 from robots.introspection import introspection
 
 from aseba import Aseba
+from ranger.behaviours.emotions import EmotionalState
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
 from ranger.helpers.position import RangerPoseManager
@@ -107,6 +108,8 @@ class Ranger(GenericRobot):
         # creates accessors for each of the fields in STATE
         self.state.update(Ranger.STATE)
         self.state.eyelids = Ranger.eyelids.OPEN
+
+        self.innerstate = EmotionalState()
 
         #######################################################################
         #                       ASEBA initialization
