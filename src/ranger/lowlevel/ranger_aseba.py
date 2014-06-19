@@ -366,7 +366,9 @@ class Ranger(GenericRobot):
 
         def decompress_touch(state):
             raw = [bool(state & 1 << i) for i in range(9)]
-            return [raw[0:9:3], raw[1:9:3], raw[2:9:3]]
+            return [[raw[3], raw[2], raw[1]],
+                    [raw[4], raw[0], raw[8]],
+                    [raw[5], raw[6], raw[7]]]
 
         self.state["touch_left"] = decompress_touch(msg[11])
         self.state["touch_rear"] = decompress_touch(msg[12])
