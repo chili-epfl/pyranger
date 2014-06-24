@@ -47,9 +47,13 @@ def placeeyes(robot, pose):
 
 @action
 @lock(EYES)
-def openeyes(robot):
+def openeyes(robot, force = False):
     if not robot.eyelids == Ranger.eyelids.OPEN:
-        robot.eyes((0,0), Ranger.eyelids.OPEN)
+        if force:
+            lids = Ranger.eyelids.OPEN
+        else:
+            lids = (v * robot.innerstate.energy for v in Ranger.eyelids.OPEN)
+        robot.eyes((0,0), lids)
 
 @action
 @lock(EYES)
