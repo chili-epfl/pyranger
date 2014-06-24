@@ -7,10 +7,16 @@ import math
 
 from ranger.lowlevel.ranger_aseba import Ranger, BATTERY_LOW_THRESHOLD, logger
 
-logger.addHandler(logging.NullHandler())
+#logger.addHandler(logging.NullHandler())
 
 from ranger.res import ID
-from ranger.helpers.plot import XYPlot
+
+showtraj = True
+try:
+	from ranger.helpers.plot import XYPlot
+except ImportError:
+	showtraj = False
+	print("No matplotlib! I won't show the trajectory.")
 
 from consoletk import ConsoleTK
 
@@ -239,6 +245,6 @@ class Monitor:
 
 if __name__ == '__main__':
 
-    with Monitor(silent = False, showtraj = True) as monitor:
+    with Monitor(silent = False, showtraj = showtraj) as monitor:
             monitor.run()
 
