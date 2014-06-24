@@ -219,3 +219,24 @@ def sneak_in(robot):
 
     except ActionCancelled:
         robot.eyes((0, 0))
+
+@action
+def look_at_caresses(robot):
+
+    try:
+        while True:
+            if robot.state.touches.is_touched_left():
+                robot.eyes((90, 50))
+                robot.sleep(rand(0.6,2))
+                robot.eyes((0,0))
+                robot.sleep(rand(2, 5))
+            elif robot.state.touches.is_touched_right():
+                robot.eyes((-90, 50))
+                robot.sleep(rand(0.6,2))
+                robot.eyes((0,0))
+                robot.sleep(rand(2, 5))
+
+            robot.sleep(0.3)
+    except ActionCancelled:
+        pass
+
