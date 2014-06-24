@@ -1,4 +1,8 @@
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    # for py 2.6: pip install ordereddict
+    from ordereddict import OrderedDict
 
 from ranger.behaviours.fn_library import *
 from ranger.behaviours.time_management import * # time_elapsed_in + different time periods

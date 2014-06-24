@@ -153,6 +153,9 @@ class Ranger(GenericRobot):
         if not dummy:
             self.get_full_state()
 
+    	if sys.version_info < (2, 7):
+	    logger.warning("Python < 2.7 does not correctly supports timeouts on threading.Event! I may wait forever for Aseba updates in case of problems with Aseba network!")
+
         #######################################################################
         #                   End of ASEBA initialization
         #######################################################################
@@ -321,7 +324,6 @@ class Ranger(GenericRobot):
         TODO: Not too good... what is in general the semantic of 'wait_for_state'? seem to be very robot dependent...
         """
     	if sys.version_info < (2, 7):
-	    logger.warning("Python < 2.7 does not correctly supports timeouts on threading.Event! I will wait forever if needed.")
             self.main_update.wait()
 	    return
 
@@ -336,8 +338,6 @@ class Ranger(GenericRobot):
         received from the low-level.
         """
     	if sys.version_info < (2, 7):
-	    logger.warning("Python < 2.7 does not correctly supports timeouts on threading.Event! I will wait forever if needed.")
-	    logger.warning("I will also skip detection of R&B.")
             self.main_update.wait()
             self.neuil_update.wait()
 	    return

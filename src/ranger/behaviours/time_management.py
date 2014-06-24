@@ -27,7 +27,9 @@ def get_current_time():
 def delta_seconds(time1, time2):
     date1 = datetime.datetime.combine(datetime.datetime.today(), time1)
     date2 = datetime.datetime.combine(datetime.datetime.today(), time2)
-    return (date2 - date1).total_seconds()
+    td = date2 - date1
+    # equivalent to timedelta.total_seconds() (only available in py 2.7)
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
 
 def get_current_period(now):
     period = None
