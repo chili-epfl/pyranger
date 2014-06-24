@@ -1,9 +1,11 @@
 nosound = False
 try:
-    import pyaudio
+    import alsaaudio
+
 except ImportError:
-    print("pyaudio, the Python port of the PortAudio library, is not available on your system. I won't play sounds!")
+    print("alsaaudio not available on your system. I won't play sounds!")
     nosound = True
+
 import wave
 import sys
 
@@ -13,62 +15,41 @@ class WavePlayer:
         if nosound:
             return
 
-        self.p = pyaudio.PyAudio()
-        self.stream = None
+        self.device = alsaaudio.PCM(card='default')
+
+	self.device.setchannels(1) # mono
+        self.device.setrate(16000)
+        self.device.setformat(alsaaudio.PCM_FORMAT_S16_LE)
+        self.device.setperiodsize(32)
+        
 
     def play(self, filename):
         if nosound:
             return
 
         self.playing = True
-        # length of data to read.
-        chunk = 1024
-        '''
-        ************************************************************************
-            This is the start of the "minimum needed to read a wave"
-        ************************************************************************
-        '''
         # open the file for reading.
-        try:
+
+	try:
             wf = wave.open(filename, 'rb')
         except IOError:
             print("Could not open sound <%s>!" % filename)
             return
-        # create an audio object
 
-        # open stream based on the wave object which has been input.
-        self.stream = self.p.open(format = self.p.get_format_from_width(wf.getsampwidth()),
-                        channels = wf.getnchannels(),
-                        rate = wf.getframerate(),
-                        output = True)
-
-        # read data (based on the chunk size)
-        data = wf.readframes(chunk)
-
-        # play stream (looping from beginning of file to the end)
-        while data != '' and self.playing:
-            # writing to the stream is what *actually* plays the sound.
-            self.stream.write(data)
-            data = wf.readframes(chunk)
-
-        # cleanup stuff.
-        self.stream.close()    
-
+        try:
+            data = wf.readframes(1600)
+            while self.playing and data:
+        	    self.device.write(data)
+        	    data = wf.readframes(1600)
+	finally:
+	    wf.close()
+  
+	 
     def stop(self):
         if nosound:
             return
 
         self.playing = False
-        if self.stream:
-            self.stream.close()
-
-    def close(self):
-        if nosound:
-            return
-
-        self.playing = False
-        self.p.terminate()
-
 
 if __name__ == "__main__":
 
@@ -80,4 +61,3 @@ if __name__ == "__main__":
 
     player = WavePlayer()
     player.play(sys.argv[1])
-    player.close()
