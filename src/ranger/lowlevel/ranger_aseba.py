@@ -5,6 +5,7 @@ logger_aseba = logging.getLogger("ranger.aseba")
 
 
 import math, time
+from collections import deque
 
 import threading # for threading.Condition
 
@@ -108,6 +109,7 @@ class Ranger(GenericRobot):
         # creates accessors for each of the fields in STATE
         self.state.update(Ranger.STATE)
         self.state.eyelids = Ranger.eyelids.OPEN
+        self.state.touches = TouchManager()
 
         self.innerstate = EmotionalState()
 
@@ -373,6 +375,7 @@ class Ranger(GenericRobot):
         self.state["touch_left"] = decompress_touch(msg[11])
         self.state["touch_rear"] = decompress_touch(msg[12])
         self.state["touch_right"] = decompress_touch(msg[10])
+        self.state.touches.update(self.state.touch_left, self.state.touch_right)
 
         if with_encoders:
             # "encoders" = [msg[13], msg[14], msg[15], msg[16]]
@@ -466,6 +469,51 @@ BEACONS_MODEL = {15: [1.0, 6.168, -0.43, 0.43],
                  16: [1.0, 6.168, -0.43, 0.43],
                  20: [0.1, 6.168, -0.43, 0.43]}
 
+
+class TouchManager:
+
+    def __init__(self):
+        self.l_vert_history = deque(maxlen=10)
+        self.l_horiz_history = deque(maxlen=10)
+        self.r_vert_history = deque(maxlen=10)
+        self.r_horiz_history = deque(maxlen=10)
+
+
+    def update(self, left, right):
+        # flatten the matrices
+        self.right = [item for sublist in right for item in sublist]
+        self.left = [item for sublist in left for item in sublist]
+
+        #self.l_horiz_history.append([self.left[0] or self.left[1] or self.left[2],
+        #                           self.left[3] or self.left[4] or self.left[5],
+        #                           self.left[6] or self.left[7] or self.left[8]] )
+
+        #self.r_horiz_history.append([self.right[0] or self.right[1] or self.right[2],
+        #                           self.right[3] or self.right[4] or self.right[5],
+        #                           self.right[6] or self.right[7] or self.right[8]] )
+
+        #self.l_vert_history.append([self.left[0] or self.left[3] or self.left[6],
+        #                           self.left[1] or self.left[4] or self.left[7],
+        #                           self.left[2] or self.left[5] or self.left[8]] )
+
+        #self.r_vert_history.append([self.right[0] or self.right[3] or self.right[6],
+        #                           self.right[1] or self.right[4] or self.right[7],
+        #                           self.right[2] or self.right[5] or self.right[8]] )
+
+
+    def is_touched_left(self):
+        return True in self.left
+
+    def is_touched_right(self):
+        return True in self.right
+
+    def is_touched(self):
+        return self.is_touched_left or self.is_touched_right
+
+    def is_back_to_front_left(self):
+        pass
+    def is_back_to_front_right(self):
+        pass
 
 class Beacon:
     """
