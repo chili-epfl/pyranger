@@ -97,7 +97,7 @@ class Monitor:
         self.out.moveto(50,2)
         self.out.label("Robot odometry:")
         self.out.relmoveto(0,1)
-        self.out.label("x:{:>5.2f}m, y:{:>5.2f}m, θ:{:>6.1f}°".format(state.x, state.y, 180. / math.pi * state.theta))
+        self.out.label("x:{0:>5.2f}m, y:{1:>5.2f}m, θ:{2:>6.1f}°".format(state.x, state.y, 180. / math.pi * state.theta))
 
         ###################################################
         ### Beacons
@@ -124,7 +124,7 @@ class Monitor:
                                         180./math.pi * beacon.phi), fg="base0")
                     self.out.relmoveto(0,1)
                     #self.out.label("-> robot at: (x:{:>5.2f}m, y:{:>5.2f}m, {:>5.1f}°)".format(beacon.robot_x, beacon.robot_y, beacon.robot_theta), fg="base0")
-                    self.out.label("-> beacon at: (x:{:>5.2f}m, y:{:>5.2f}m), orientation: {:>5.1f}°)".format(beacon.x, beacon.y, 180./math.pi * beacon.beacon_theta), fg="base0")
+                    self.out.label("-> beacon at: (x:{0:>5.2f}m, y:{1:>5.2f}m), orientation: {2:>5.1f}°)".format(beacon.x, beacon.y, 180./math.pi * beacon.beacon_theta), fg="base0")
                 else:
                     self.out.label("(out of sight or too close or not facing)")
                     self.out.relmoveto(0,1)

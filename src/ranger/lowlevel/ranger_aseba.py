@@ -1,4 +1,5 @@
 import logging
+import sys
 
 logger = logging.getLogger("ranger")
 logger_aseba = logging.getLogger("ranger.aseba")
@@ -319,6 +320,10 @@ class Ranger(GenericRobot):
         """
         TODO: Not too good... what is in general the semantic of 'wait_for_state'? seem to be very robot dependent...
         """
+    	if sys.version_info < (2, 7):
+	    logger.warning("Python < 2.7 does not correctly supports timeouts on threading.Event! I will wait forever if needed.")
+            self.main_update.wait()
+	    return
 
         return self.main_update.wait(timeout)
 
@@ -330,6 +335,12 @@ class Ranger(GenericRobot):
         """Blocks until the full state of the robot has been
         received from the low-level.
         """
+    	if sys.version_info < (2, 7):
+	    logger.warning("Python < 2.7 does not correctly supports timeouts on threading.Event! I will wait forever if needed.")
+	    logger.warning("I will also skip detection of R&B.")
+            self.main_update.wait()
+            self.neuil_update.wait()
+	    return
 
         if self.main_update.wait(timeout) is None:
             raise RuntimeError("'main' node does not transmit its state!! Check the connection to the aseba network.")
