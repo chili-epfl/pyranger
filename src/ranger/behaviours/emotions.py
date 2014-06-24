@@ -45,6 +45,8 @@ class EmotionalState:
             0.3 -> tired
         """
         ratio = ratio_time_elapsed_in(DAY)
+        if ratio is None:
+            return 0.6
         return dromadaire(ratio) * 0.6 + 0.4
 
     @property

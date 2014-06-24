@@ -67,6 +67,8 @@ def ratio_time_elapsed_in(timezone):
 
     now = datetime.datetime.now().time()
     secs = time_elapsed_in(timezone)
+    if secs is None: # out of the periods
+        return None
 
     if timezone == ACTIVITY_PERIOD:
         period = get_current_period(now)
