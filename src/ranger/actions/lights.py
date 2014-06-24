@@ -16,6 +16,29 @@ def lightpattern(robot, pattern, repeat = False):
 
 @action
 @lock(LEDS)
+def pulse(robot, id, color, speed = 5):
+
+    STEPS = 10
+    try:
+        r,g,b = color
+        i = 0
+        inc = 1.
+        while True:
+            i += inc
+            if i == 0:
+                inc = 1
+            if i == STEPS:
+                inc = -1
+
+            factor = float(i) / STEPS
+            robot.set_led(id, (r * factor, g * factor, b * factor))
+            robot.sleep(0.1/speed)
+
+    except ActionCancelled:
+        robot.set_led(id, (0,0,0))
+
+@action
+@lock(LEDS)
 def lightbar(robot, level = 0.5, ramp = colors.BLUE_TO_RED, vertical = True, with_modifier = True):
     
     steps = NB_ROWS if vertical else NB_COLS
