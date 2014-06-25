@@ -54,11 +54,24 @@ def wakeup(robot):
     try:
         robot.eyes(eyes = (0, 0))
 
-        robot.eyes(left_lid = (rand(18, 25), rand(18,25)))
-        robot.sleep(rand(0.6, 0.7))
-        robot.eyes(right_lid = (rand(18, 25), rand(18,25)))
-        robot.sleep(rand(0.6, 0.7))
-        robot.eyes(lids = Ranger.eyelids.OPEN)
+        technique = rand_in([1,2])
+
+        if technique == 1:
+            for i in range(int(rand(70,85)))[::rand_in([3,4])]:
+                robot.eyes(lids = (i, i))
+                robot.sleep(0.1)
+            robot.eyes((rand(-90, 90), 0 ))
+            robot.sleep(rand(0.5, 1.))
+            robot.eyes((rand(-90, 90), 0 ))
+            robot.sleep(rand(0.5, 1.))
+            robot.eyes(eyes = (0,0), lids = Ranger.eyelids.OPEN)
+        else:
+
+            robot.eyes(left_lid = (rand(18, 25), rand(18,25)))
+            robot.sleep(rand(0.6, 0.7))
+            robot.eyes(right_lid = (rand(18, 25), rand(18,25)))
+            robot.sleep(rand(0.6, 0.7))
+            robot.eyes(lids = Ranger.eyelids.OPEN)
 
     except ActionCancelled:
         robot.eyes(eyes = (0, 0),
@@ -69,11 +82,12 @@ def wakeup(robot):
 def fall_asleep(robot):
 
     try:
-        robot.eyes(left_lid = (rand(18, 25), rand(18,25)))
-        robot.sleep(rand(0.6, 0.7))
-        robot.eyes(right_lid = (rand(18, 25), rand(18,25)))
-        robot.sleep(rand(0.6, 0.7))
-        robot.eyes(lids = Ranger.eyelids.CLOSED)
+        for i in range(int(rand(70,85)))[::rand_in([3,4])]:
+            robot.eyes(lids = (100 - i, 100 - i))
+            robot.sleep(0.1)
+        robot.eyes((rand(-90, 90), 0 ))
+        robot.sleep(rand(0.6, 1.5))
+        robot.eyes(eyes = (0,0), lids = Ranger.eyelids.CLOSED)
 
     except ActionCancelled:
         robot.eyes(eyes = (0, 0),
