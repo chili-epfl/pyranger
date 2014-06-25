@@ -52,7 +52,7 @@ def openeyes(robot, force = False):
         if force:
             lids = Ranger.eyelids.OPEN
         else:
-            lids = (v * robot.innerstate.energy for v in Ranger.eyelids.OPEN)
+            lids = ((l * robot.innerstate.energy, r * robot.innerstate.energy) for l,r in Ranger.eyelids.OPEN)
         robot.eyes((0,0), lids)
 
 @action
