@@ -11,24 +11,35 @@ from ranger import Ranger # for eyelids constants
 def clamp(v, vmin, vmax):
     return max(vmin, min(vmax, v))
 
+@action
+@lock(PUPILS)
+def placeeyes(robot, left, right = None):
+    if right is None:
+        robot.eyes(left)
+    else:
+        robot.eyes(left = left, right = right)
 
 @action
-@lock(EYES)
+def look_at_lolette(robot):
+    robot.placeeyes(left=(-100,-100), right=(100,-100)).wait()
+
+@action
+@lock(PUPILS)
 def lookat(robot, pose):
-    placeeyes(robot, pose)
+    place_eyes_towards(robot, pose)
 
 @action
-@lock(EYES)
+@lock(PUPILS)
 def track(robot, pose):
     try:
         while True:
-            placeeyes(robot, pose)
+            place_eyes_towards(robot, pose)
             time.sleep(0.2)
     except ActionCancelled:
         robot.eyes((0, 0))
 
 
-def placeeyes(robot, pose):
+def place_eyes_towards(robot, pose):
     pan, tilt = robot.pose.pantilt(pose, "eyes_link")
     if pan < -math.pi/2 or pan > math.pi/2:
         #out of field of view!
