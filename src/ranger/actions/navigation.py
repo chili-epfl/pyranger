@@ -63,14 +63,14 @@ def dock_for_charging(robot):
 
 @action
 @lock(WHEELS)
-def undock(robot):
+def undock(robot, v = 0.08):
     if not robot.state.charging:
         logger.info("Not docked (no charging). Nothing to do.")
         return
     
     try:
         with WHEELS:
-            robot.move(0.4).wait()
+            robot.move(0.4, v = v).wait()
     except ActionCancelled:
         pass
 
@@ -283,7 +283,7 @@ def turn(robot, angle, w = 0.5, easing = True):
             total_rotation += robot.pose.angular_distance(last_theta, theta)
             last_theta = theta 
             achieved = total_rotation / float(angle)
-            logger.debug("Turned by {:.1f}rad ({:.1f}% of target)".format(total_rotation, achieved))
+            logger.debug("Turned by {:.1f}rad ({:.1f}% of target)".format(total_rotation, achieved * 100))
 
             if achieved > 0.95:
                 robot.speed(w=0)
