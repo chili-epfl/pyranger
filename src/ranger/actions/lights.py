@@ -143,7 +143,7 @@ def lightbar(robot,
     steps = NB_ROWS if vertical else NB_COLS
 
     direction = 1 if ((speed is None) or speed > 0) else -1
-    speed = abs(speed)
+    speed = abs(speed) if speed else None
 
     if ramp:
         if not isinstance(ramp, list):
