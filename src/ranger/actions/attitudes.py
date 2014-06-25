@@ -10,16 +10,16 @@ from ranger.res import *
 from ranger import Ranger # for eyelids constants
 
 @action
-@lock(EYES)
 def idle(robot):
 
     try:
         while True:
-            robot.sleep(rand(10, 30))
-            val = rand_in([-75,-60, 60, 75])
-            robot.eyes((val, 0))
-            robot.sleep(1)
-            robot.eyes((0, 0))
+            robot.sleep(rand(5, 10))
+            if not robot.state.asleep:
+                val = rand_in([-75,-60, 60, 75])
+                robot.placeeyes((val, 0))
+                robot.sleep(1)
+                robot.placeeyes((0, 0))
 
 
     except ActionCancelled:
@@ -27,23 +27,25 @@ def idle(robot):
 
 
 @action
-@lock(EYES)
-@lock(WHEELS)
 def active_wait(robot):
 
     try:
+        robot.idle()
+
         while True:
-            with EYES:
+            eyes = rand_in(range(4))
+            if eyes == 1:
                 robot.sneak_in()
-                robot.turn(rand(0.3, 0.7)).wait()
-                robot.sleep(1)
-                robot.turn(-2 * rand(0.3, 0.7)).wait()
-                robot.sleep(1)
-                robot.turn(rand(0.3, 0.7)).wait()
+
+            robot.turn(rand(0.3, 0.7)).wait()
+            robot.sleep(1)
+            robot.turn(-2 * rand(0.3, 0.7)).wait()
+            robot.sleep(1)
+            robot.turn(rand(0.3, 0.7)).wait()
             robot.sleep(rand(5,10))
 
     except ActionCancelled:
-            robot.speed(0)
+        pass
 
 @action
 @lock(EYES)
