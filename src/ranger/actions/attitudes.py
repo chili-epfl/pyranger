@@ -151,12 +151,15 @@ def background_blink(robot, focused = False):
     # and ~ x3 when focused
     try:
         while True:
-            if focused:
-                robot.sleep(12 + rand(-2, 2))
-            else:
-                robot.sleep(6 + rand(-2, 2))
+            if not robot.state.asleep:
+                if focused:
+                    robot.sleep(12 + rand(-2, 2))
+                else:
+                    robot.sleep(6 + rand(-2, 2))
 
-            robot.blink()
+                robot.blink()
+            else:
+                robot.sleep(6)
 
     except ActionCancelled:
         pass
@@ -241,16 +244,20 @@ def look_at_caresses(robot):
 
     try:
         while True:
-            if robot.state.touches.is_touched_left():
-                robot.eyes((90, 50))
-                robot.sleep(rand(0.6,2))
-                robot.eyes((0,0))
-                robot.sleep(rand(2, 5))
-            elif robot.state.touches.is_touched_right():
-                robot.eyes((-90, 50))
-                robot.sleep(rand(0.6,2))
-                robot.eyes((0,0))
-                robot.sleep(rand(2, 5))
+            if not robot.state.asleep:
+                if robot.state.touches.is_touched_left():
+                    robot.blush()
+                    robot.placeeyes((90, 50))
+                    robot.sleep(rand(0.6,1.2))
+                    robot.placeeyes((0,0))
+                    robot.sleep(1.)
+
+                elif robot.state.touches.is_touched_right():
+                    robot.blush()
+                    robot.placeeyes((-90, 50))
+                    robot.sleep(rand(0.6,1.2))
+                    robot.placeeyes((0,0))
+                    robot.sleep(1.)
 
             robot.sleep(0.3)
     except ActionCancelled:
