@@ -27,6 +27,7 @@ from ranger.res import MYSTATION
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
 
 BATTERY_MAX_LEVEL = 8400 #mV
+BATTERY_MIN_CHARGED_LEVEL = 8000 #mV
 BATTERY_LOW_THRESHOLD = 7200 #mV
 
 # Required to access the list of events
@@ -88,7 +89,8 @@ class Ranger(GenericRobot):
         "theta":                0.0,  # orientation of the robot, computed from odometry
         "v":                    0.0,  # linear velocity, in robot's forward direction
         "w":                    0.0,   # rotation velocity
-        "eyelids":              None   # state of the eyelids (open, half-open or closed)
+        "eyelids":              None,  # state of the eyelids (open, half-open or closed)
+        "asleep":               False # general awarness 
         }
 
     def __init__(self, dummy = False, immediate = False, default_logging=True, with_ros = True):
