@@ -16,8 +16,9 @@ AUDIO = Resource("audio")
 LEDS = Resource("LEDs")
 
 # sound library
-SOUNDS = dict(toy_in = "share/sounds/1_happy_noise_-_parade-2.wav",
-              toy_out = "share/sounds/3_irritated-discharging-cut.wav")
+SOUNDS = dict(toy_in = "/root/sound_library/1_happy_noise_-_parade-2.wav",
+              toy_out = "/root/sound_library/3_irritated-discharging-cut.wav",
+              battery_low = "/root/sound_library/0_curious_-_finding_toy.wav")
 
 # Pre-recorded light patterns
 PATTERNS = dict(toy_in = 1,
