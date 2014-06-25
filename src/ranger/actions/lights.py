@@ -15,6 +15,41 @@ def lightpattern(robot, pattern, repeat = False):
     robot.led_pattern(pattern, repeat)
 
 @action
+@lock(LEDS, wait=False)
+def blush(robot, times = 2):
+    # LEDs IDs
+    left_chick = [14, 15, 20, 21, 22, 26, 27]
+    right_chick = [158, 159, 164, 165, 166, 170, 171]
+
+    SPEED = 5
+    STEPS = 10
+    try:
+        robot.turn_off_leds()
+
+        r,g,b = (200, 30, 128)
+        i = 0
+        inc = 1.
+        for j in range(times):
+            for k in range(2 * STEPS):
+                i += inc
+                if i == 0:
+                    inc = 1
+                if i == STEPS:
+                    inc = -1
+
+                factor = float(i) / STEPS
+                for id in left_chick + right_chick:
+                    robot.set_led(id, (r * factor, g * factor, b * factor))
+                robot.sleep(0.1/SPEED)
+
+        robot.turn_off_leds()
+
+    except ActionCancelled:
+        robot.turn_off_leds()
+
+
+
+@action
 @lock(LEDS)
 def pulse(robot, id, color, speed = 5):
 
