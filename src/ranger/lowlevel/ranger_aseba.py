@@ -21,7 +21,7 @@ from aseba import Aseba
 from ranger.behaviours.emotions import EmotionalState
 from ranger.helpers.data_conversion import *
 from ranger.helpers.odom import Odom
-from ranger.helpers.position import RangerPoseManager
+from ranger.helpers.position import RangerFrames
 from ranger.res import MYSTATION
 
 MAX_SPEED = .16 #m.s^-1 on the wheels for ranger2
@@ -107,7 +107,7 @@ class Ranger(GenericRobot):
         self.beacons = {}
         self.odom = Odom()
 
-        self.pose = RangerPoseManager(self)
+        self.pose.add_frame_provider(RangerFrames(self))
 
         # creates accessors for each of the fields in STATE
         self.state.update(Ranger.STATE)
@@ -400,6 +400,17 @@ class Ranger(GenericRobot):
             self.state["theta"] = self.pose.normalize_angle(th)
             self.state["v"] = v
             self.state["w"] = w
+
+            # Publish the map transform (<- usually done by ranger_ros node)
+            #if self.supports(ROS):
+            #    self.rosframes.publish_transform("map", {"x": x,
+            #                                             "y": y,
+            #                                             "z": 0,
+            #                                             "qx": 0,
+            #                                             "qy": 0,
+            #                                             "qz": 0,
+            #                                             "qw": 1,
+            #                                             "frame": "base_link"})
 
         self.state["charging"] = msg[13 if not with_encoders else 17]
 

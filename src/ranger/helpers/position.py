@@ -1,15 +1,15 @@
 import logging; logger = logging.getLogger("ranger.poses")
 
-from robots.helpers.position import PoseManager, UnknownFrameError, InvalidFrameError
+from robots.helpers.position import FrameProvider, UnknownFrameError
 
 from ranger.res import ID, MYSTATION # list of R&B ids known to the system
 
-class RangerPoseManager(PoseManager):
+class RangerFrames(FrameProvider):
 
     def __init__(self, robot):
-        super(RangerPoseManager, self).__init__(robot)
+        self.robot = robot
 
-    def getabspose(self, frame):
+    def get_transform(self, frame):
         """
         Returns the a frame pose in the /map frame.
         """
@@ -21,7 +21,7 @@ class RangerPoseManager(PoseManager):
 
             if frame == "map" or frame == "station":
                 # the charging station is the origin of the map
-                return {frame:"map"}
+                return {"frame":"map"}
 
             if frame == "eyes_link":
                 # position of the (middle of) the eyes
