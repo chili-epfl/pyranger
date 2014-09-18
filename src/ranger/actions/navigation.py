@@ -2,8 +2,10 @@ import logging; logger = logging.getLogger("ranger.navigation")
 
 import time, math
 from random import uniform as rand, choice
-from robots.decorators import action, lock
-from robots.signals import ActionCancelled
+
+from robots.concurrency import action, ActionCancelled
+from robots.resources import lock
+
 from robots.mw import ROS
 from ranger.res import *
 
@@ -159,15 +161,15 @@ def face(robot, pose, w = 0.5, backwards = False):
     :param speed: rotation speed, in rad.s^-1
     :param backwards: (default: False) If true, face 'backwards' (ie turn back to target)
     """
-    if robot.pose.distance(pose) < 0.1:
+    if robot.poses.distance(pose) < 0.1:
         logger.warning("Too close to target to face for meaningful rotation. Staying where I am.")
         return
 
     try:
-        angle, _  = robot.pose.pantilt(pose)
+        angle, _  = robot.poses.pantilt(pose)
 
         if backwards:
-            angle = robot.pose.normalize_angle(angle + math.pi)
+            angle = robot.poses.normalize_angle(angle + math.pi)
 
         if abs(angle) < 0.02:
             logger.debug("Already facing %s. Fine." % pose)
@@ -190,7 +192,7 @@ def orient(robot, pose):
     """
     
     try:
-        rx,ry,rz = robot.pose.euler(robot.pose.inframe(pose, "base_link"))
+        rx,ry,rz = robot.poses.euler(robot.poses.inframe(pose, "base_link"))
 
         if abs(rz) < 0.02:
             logger.debug("Orientation already fine.")
@@ -228,10 +230,10 @@ def move(robot, distance, v = 0.2, easing = True):
     max_speed = max(0.01, min(abs(distance)/2, abs(v)))
 
     try:
-        initial_pose = robot.pose.myself()
+        initial_pose = robot.poses.myself()
 
         while True:
-            total_distance = robot.pose.distance(initial_pose)
+            total_distance = robot.poses.distance(initial_pose)
             achieved = total_distance / abs(float(distance))
             logger.debug("Moved {:.1f}m ({:.1f}% of target)".format(total_distance, achieved))
 
@@ -280,7 +282,7 @@ def turn(robot, angle, w = 0.5, easing = True):
     try:
         while True:
             theta = robot.state.theta
-            total_rotation += robot.pose.angular_distance(last_theta, theta)
+            total_rotation += robot.poses.angular_distance(last_theta, theta)
             last_theta = theta 
             achieved = total_rotation / float(angle)
             logger.debug("Turned by {:.1f}rad ({:.1f}% of target)".format(total_rotation, achieved * 100))
@@ -309,7 +311,7 @@ def turn(robot, angle, w = 0.5, easing = True):
 @lock(WHEELS)
 def goto_ros(robot, pose):
 
-    pose = robot.pose.inframe(pose, "map")
+    pose = robot.poses.inframe(pose, "map")
 
     import rospy
     import actionlib
@@ -407,14 +409,14 @@ def goto_beacon(robot, beacon_id):
 
             robot.look_for_beacon(beacon_id).wait()
 
-            if robot.pose.distance(beacon_id) > 1:
+            if robot.poses.distance(beacon_id) > 1:
                 motion = robot.goto(beacon_id,
                                     distance_to_target = 1,
                                     ignore_orientation = True)
 
                 while not motion.done():
                     robot.sleep(0.5)
-                    if robot.pose.distance(beacon_id) > 1.5 and not robot.beacons[beacon_id].valid:
+                    if robot.poses.distance(beacon_id) > 1.5 and not robot.beacons[beacon_id].valid:
                         logger.warning("Target beacon lost! Moved maybe? let look for it.")
                         motion.cancel()
                         robot.look_for_beacon(beacon_id).wait()

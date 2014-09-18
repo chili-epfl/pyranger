@@ -1,6 +1,6 @@
 import logging; logger = logging.getLogger("ranger.battery")
-from robots.decorators import action, lock
-from robots.signals import ActionCancelled
+from robots.concurrency import action, ActionCancelled
+from robots.resources import lock
 from ranger.res import LEDS
 
 from ranger.lowlevel.ranger_aseba import BATTERY_MAX_LEVEL, BATTERY_LOW_THRESHOLD

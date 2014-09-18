@@ -1,5 +1,5 @@
 from robots.resources import Resource, CompoundResource
-from robots.helpers.helpers import enum
+from robots.helpers.misc import enum
 
 # hardware resource that need to be shared
 LPUPIL = Resource("left pupil")

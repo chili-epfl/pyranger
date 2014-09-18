@@ -1,7 +1,7 @@
 import datetime # for timedelta
 import time # for timestamps
 
-from robots.helpers.helpers import enum
+from robots.helpers.misc import enum
 
 # 1 -> physical time
 # 3600 -> 1 real second correspond to 1 hour

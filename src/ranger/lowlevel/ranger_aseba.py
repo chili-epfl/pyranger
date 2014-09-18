@@ -13,8 +13,8 @@ import threading # for threading.Condition
 from robots import GenericRobot
 
 from robots.mw import ROS
-from robots.helpers.helpers import enum
-from robots.helpers.position import PoseManager # for normalize_angle
+from robots.helpers.misc import enum
+from robots.poses import PoseManager # for normalize_angle
 from robots.introspection import introspection
 
 from aseba import Aseba
@@ -107,7 +107,7 @@ class Ranger(GenericRobot):
         self.beacons = {}
         self.odom = Odom()
 
-        self.pose.add_frame_provider(RangerFrames(self))
+        self.poses.add_frame_provider(RangerFrames(self))
 
         # creates accessors for each of the fields in STATE
         self.state.update(Ranger.STATE)
@@ -127,7 +127,7 @@ class Ranger(GenericRobot):
 
         # Basic check to be sure all the Ranger's ASEBA nodes are up and running
         nodes = self.aseba.get_nodes_list()
-        if not dummy and len(nodes) != 3:
+        if not dummy and len(nodes) != 2:
             logger.error("One of the Ranger Aseba node is not up!!")
             logger.error("List of active nodes: {0}".format(nodes))
             raise Exception("Missing Aseba node")
@@ -135,13 +135,13 @@ class Ranger(GenericRobot):
         # Register callbacks for the main events of the 3 nodes
         self.aseba.on_event("mainFeedbackWithEncoders", self._process_main_feedback)
         self.aseba.on_event("neuilFeedback", self._process_neuil_feedback)
-        self.aseba.on_event("receiverFeedback", self._process_rab_feedback)
+        #self.aseba.on_event("receiverFeedback", self._process_rab_feedback)
 
         # Condition variable that can be used to wait
         # until the next update of a given Aseba node
         self.main_update = threading.Event()
         self.neuil_update = threading.Event()
-        self.rab_update = threading.Event()
+        #self.rab_update = threading.Event()
 
         # Starts DBus thread (responsible for receiving events)
         self.aseba_thread = threading.Thread(target=self.aseba.run)
@@ -350,8 +350,6 @@ class Ranger(GenericRobot):
         if self.neuil_update.wait(timeout) is None:
             raise RuntimeError("'neuil' node does not transmit its state!! Check the connection to the aseba network.")
 
-        if self.rab_update.wait(timeout) is None:
-            logger.warning("I did not see any beacons during initialization! I can not set my absolute location.")
         else:
             if MYSTATION not in self.beacons:
                 logger.warning("I did not see the charging station during initialization! I can not set my absolute location.")
@@ -397,7 +395,7 @@ class Ranger(GenericRobot):
 
             self.state["x"] = x
             self.state["y"] = y
-            self.state["theta"] = self.pose.normalize_angle(th)
+            self.state["theta"] = self.poses.normalize_angle(th)
             self.state["v"] = v
             self.state["w"] = w
 
@@ -441,40 +439,6 @@ class Ranger(GenericRobot):
         # notify the update
         self.neuil_update.set()
         self.neuil_update.clear()
-
-
-    def _process_rab_feedback(self, msg):
-        """
-        msg[0]: beacon ID
-        msg[1]: angle where the beacon is seen, from the robot's R&B perspective
-        msg[2]: distance
-        msg[5]: angle where the robot is seen, from the beacon R&B perspective (ie, theta polar coord of robot in map)
-        msg[4]: distance where the robot is seen, from the beacon R&B perspective (ie, r polar coord of robot in map)
-        """
-        id, angle, distance, my_own_id, packet_id, reverse_distance, reverse_angle, lolettes = [int(val) for val in msg[:8]] # convert DBus integers to regular int
-
-
-        # convert to meters and radians
-        angle = PoseManager.normalize_angle(-math.pi * angle / 1800.)
-        distance = distance / 1000.
-        reverse_angle = PoseManager.normalize_angle(-math.pi * reverse_angle / 1800.)
-        reverse_distance = reverse_distance / 1000.
-
-        if distance > 0: # may be zero in case of error (somewhere...)
-            if id not in self.beacons:
-                self.beacons["rab_%s" % id] = Beacon(id, self)
-
-            self.beacons["rab_%s" % id].update(
-                    distance = distance,
-                    angle = angle,
-                    reverse_distance = reverse_distance,
-                    reverse_angle = reverse_angle)
-
-            self.state["freq_rab"] = self.aseba.get_event_frequency("receiverFeedback")
-
-            # notify the update
-            self.rab_update.set()
-            self.rab_update.clear()
 
 
     def _send_evt(self, id, *args, **kwargs):
@@ -632,7 +596,7 @@ class Beacon:
         self.robot_theta = PoseManager.normalize_angle(math.pi - (self.theta - self.phi))
 
         if self.valid:
-            self.last_valid_pose = self.robot.pose.inframe([self.x,
+            self.last_valid_pose = self.robot.poses.inframe([self.x,
                                                             self.y,
                                                             0,
                                                             0,

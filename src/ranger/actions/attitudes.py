@@ -3,8 +3,9 @@ import time
 import math
 from random import uniform as rand
 from random import choice as rand_in
-from robots.decorators import action, lock
-from robots.signals import ActionCancelled
+
+from robots.concurrency import action, ActionCancelled
+from robots.resources import lock
 
 from ranger.res import *
 from ranger import Ranger # for eyelids constants

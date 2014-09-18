@@ -1,6 +1,6 @@
 import logging; logger = logging.getLogger("ranger.poses")
 
-from robots.helpers.position import FrameProvider, UnknownFrameError
+from robots.poses import FrameProvider, UnknownFrameError
 
 from ranger.res import ID, MYSTATION # list of R&B ids known to the system
 

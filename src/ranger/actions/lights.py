@@ -1,7 +1,8 @@
 import logging; logger = logging.getLogger("ranger.light")
 
-from robots.decorators import action, lock
-from robots.signals import ActionCancelled
+from robots.concurrency import action, ActionCancelled
+from robots.resources import lock
+
 from ranger.res import *
 from ranger.helpers import colors
 
