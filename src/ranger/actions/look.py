@@ -25,6 +25,24 @@ def look_at_lolette(robot):
 
 @action
 @lock(PUPILS)
+def rolleyes(robot, times = 2):
+    r = 70
+    robot.eyes((r,0))
+    time.sleep(0.1)
+
+    for n in range(times):
+        for i in range(20):
+            theta = i * 2 * math.pi / 20
+            x = r * math.cos(theta)
+            y = r * math.sin(theta)
+            robot.eyes((x,y))
+            time.sleep(0.05)
+
+    
+    robot.eyes((0,0))
+
+@action
+@lock(PUPILS)
 def lookat(robot, pose):
     place_eyes_towards(robot, pose)
 
