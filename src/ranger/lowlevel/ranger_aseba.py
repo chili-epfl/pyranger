@@ -127,7 +127,7 @@ class Ranger(GenericRobot):
 
         # Basic check to be sure all the Ranger's ASEBA nodes are up and running
         nodes = self.aseba.get_nodes_list()
-        if not dummy and len(nodes) != 2:
+        if not dummy and len(nodes) not in [2,3]:
             logger.error("One of the Ranger Aseba node is not up!!")
             logger.error("List of active nodes: {0}".format(nodes))
             raise Exception("Missing Aseba node")

@@ -4,12 +4,12 @@ import logging
 import time
 from random import uniform as rand
 
-from robots.signals import ActionCancelled
+from robots.concurrency import action, ActionCancelled
+from robots.resources import lock
+
 from ranger import Ranger
 from ranger.lowlevel.ranger_aseba import BATTERY_MIN_CHARGED_LEVEL, BATTERY_LOW_THRESHOLD
-from robots.decorators import action, lock
 from ranger.res import ID, SOUNDS, PATTERNS
-from robots.introspection import introspection
 from ranger.helpers import colors
 
 logger = logging.getLogger("ranger.scenario")
@@ -175,12 +175,12 @@ def init_robot(robot):
     robot.background_blink()
     robot.look_at_caresses()
 
-    robot.every("lolette", becomes = True).do(runner(on_lolette))
-    robot.every("lolette", becomes = False).do(runner(on_lolette_removed))
-    robot.every("scale", increase = 0.3).do(on_toy_added)
-    robot.every("scale", decrease = 0.3).do(on_toy_removed)
-    robot.every("battery", below = BATTERY_LOW_THRESHOLD).do(on_battery_low)
-    #robot.every("bumper", becomes = True).do(runner(on_bumped))
+    robot.whenever("lolette", becomes = True).do(runner(on_lolette))
+    robot.whenever("lolette", becomes = False).do(runner(on_lolette_removed))
+    robot.whenever("scale", increase = 0.3).do(on_toy_added)
+    robot.whenever("scale", decrease = 0.3).do(on_toy_removed)
+    robot.whenever("battery", below = BATTERY_LOW_THRESHOLD).do(on_battery_low)
+    #robot.whenever("bumper", becomes = True).do(runner(on_bumped))
 
 
 

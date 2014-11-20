@@ -3,10 +3,12 @@
 import logging
 import time
 
-from ranger import Ranger
-from robots.decorators import action, lock
-from ranger.res import ID, SOUNDS, PATTERNS
+from robots.concurrency import action
+from robots.resources import lock
 from robots.introspection import introspection
+
+from ranger import Ranger
+from ranger.res import ID, SOUNDS, PATTERNS
 
 logger = logging.getLogger("ranger.scenario")
 logging.getLogger("ranger.aseba").setLevel(logging.DEBUG-1) # effectively silent aseba debug messages
@@ -84,10 +86,10 @@ with Ranger() as robot:
 
     logger.info("Ok! Let's start!")
     logger.info("Waiting for the lolette to be removed...")
-    robot.every("lolette", becomes = True).do(runner(on_lolette))
-    robot.every("lolette", becomes = False).do(runner(on_lolette_removed))
-    robot.every("scale", increase = 0.1, max_firing_freq = 0.3).do(on_toy_added)
-    robot.every("scale", decrease = 0.1, max_firing_freq = 0.3).do(on_toy_removed)
+    robot.whenever("lolette", becomes = True).do(runner(on_lolette))
+    robot.whenever("lolette", becomes = False).do(runner(on_lolette_removed))
+    robot.whenever("scale", increase = 0.1, max_firing_freq = 0.3).do(on_toy_added)
+    robot.whenever("scale", decrease = 0.1, max_firing_freq = 0.3).do(on_toy_removed)
 
     try:
         while not robot.rosactions.is_shutdown():
