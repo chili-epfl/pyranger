@@ -5,6 +5,12 @@ Implement Ranger specific behaviours on top of the pyRobots framework.
 
 This include odometry calculation.
 
+Check-list
+----------
+
+- ROS: `ntpdate <host>`, export the `ROS_MASTER_URI` (+ run `roscore`
+  somewhere!)
+- Audio: call `hack_audio.sh`
 Instruction to launch directly on the robot
 -------------------------------------------
 
