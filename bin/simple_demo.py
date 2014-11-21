@@ -34,26 +34,6 @@ def on_lolette(robot):
     sleep.wait()
     robot.state.asleep = True
 
-    pulse = None
-    try:
-        while True:
-            if robot.state.charging:
-                pulse = robot.pulse_row(0, (255, 255 ,0))
-                while robot.state.charging and not robot.state.battery > BATTERY_MIN_CHARGED_LEVEL:
-                    robot.sleep(1.)
-                    logger.info("Battery at %dmV (charging up to %dmV)" % (robot.state.battery, BATTERY_MIN_CHARGED_LEVEL))
-                pulse.cancel()
-
-                if robot.state.battery > BATTERY_MIN_CHARGED_LEVEL: # charging complete!
-                    logger.info("Ok, I'm good to go!")
-                    pulse = robot.pulse_row(0, (0, 128 ,0))
-
-            robot.sleep(.4)
-
-    except ActionCancelled:
-        if pulse:
-            pulse.cancel()
-
 
 @action
 def on_lolette_removed(robot):
@@ -73,15 +53,24 @@ def on_lolette_removed(robot):
 def on_bumped(robot):
     if robot.state.asleep:
         logger.info("Don't wake me up, I sleep!")
-        robot.eyes(left=(0,0), left_lid=(18,18))
-        robot.sleep(1.)
-        robot.eyes(left=(50,0))
-        robot.sleep(1.)
-        robot.closeeyes()
+        dice = rand(0, 1)
+        if dice > 0.7:
+            robot.eyes(left=(0,0), left_lid=(18,18))
+            robot.sleep(1.)
+            robot.eyes(left=(50,0))
+            robot.sleep(1.)
+            robot.closeeyes()
+        elif dice < 0.3:
+            robot.eyes(right=(0,0), right_lid=(18,18))
+            robot.sleep(1.)
+            robot.eyes(right=(50,0))
+            robot.sleep(1.)
+            robot.closeeyes()
         return
 
     logger.info("Ouhouh! I bumped into something, or someone is driving me!")
     robot.state.asleep = False
+    robot.rolleyes()
     pulse = robot.pulse_row(0, (128, 0, 128))
 
     robot.sleep(1.)
@@ -150,33 +139,57 @@ def on_battery_low(robot):
 
     init_robot(robot)
 
+@action
+def on_sleeping_charging(robot):
+    pulse = None
+    try:
+        if robot.state.battery < BATTERY_MIN_CHARGED_LEVEL:
+            pulse = robot.pulse_row(0, (255, 255 ,0))
+        if robot.state.battery > BATTERY_MIN_CHARGED_LEVEL:
+            pulse = robot.pulse_row(0, (0, 128 ,0))
+
+        while sleeping_charging(robot):
+            logger.info("Battery at %dmV (charging up to %dmV)" % (robot.state.battery, BATTERY_MIN_CHARGED_LEVEL))
+            robot.sleep(1.)
+
+    except ActionCancelled:
+        if pulse:
+            pulse.cancel()
+
+
+
+def sleeping_charging(robot):
+    return robot.state.asleep and robot.state.charging
+
+
 def init_robot(robot):
 
+    robot.stop()
     #robot.show_battery()
 
     robot.background_blink()
     robot.look_at_caresses()
 
+    robot.whenever("battery", below = BATTERY_LOW_THRESHOLD).do(on_battery_low)
+
     robot.whenever("lolette", becomes = True).do(on_lolette)
     robot.whenever("lolette", becomes = False).do(on_lolette_removed)
-    #robot.whenever("scale", increase = 0.3).do(on_toy_added)
-    #robot.whenever("scale", decrease = 0.3).do(on_toy_removed)
-    #robot.whenever("battery", below = BATTERY_LOW_THRESHOLD).do(on_battery_low)
+    robot.whenever("scale", increase = 0.3).do(on_toy_added)
+    robot.whenever("scale", decrease = 0.3).do(on_toy_removed)
+    robot.whenever("bumper", becomes = True).do(on_bumped)
+    robot.whenever(sleeping_charging).do(on_sleeping_charging)
 
-    #robot.whenever("bumper", becomes = True).do(runner(on_bumped))
-
-    pass
-
-with Ranger(with_ros=False) as robot:
+with Ranger(with_ros=True) as robot:
 
     # Turn on DEBUG logging
-    robot.debug()
+    #robot.debug()
 
     logger.info("Ok! Let's start!")
     init_robot(robot)
     robot.state.asleep = True # force asleep to effectively wake up :-)
     #runner(on_lolette_removed)(robot)
-    #logger.info("I'm awake, waiting for interactions!")
+    on_lolette_removed(robot)
+    logger.info("I'm awake, waiting for interactions!")
 
     try:
         while True:
