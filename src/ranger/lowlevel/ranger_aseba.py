@@ -47,10 +47,6 @@ def configure_logging():
     logger.addHandler(console)
     logger_aseba.addHandler(console)
 
-    robotlogger = logging.getLogger("robots")
-    robotlogger.addHandler(console)
-
-
 def clamp(val, vmin, vmax):
     return max(vmin, min(vmax, val))
 
