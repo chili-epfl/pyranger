@@ -462,6 +462,8 @@ class TouchManager:
         self.r_vert_history = deque(maxlen=10)
         self.r_horiz_history = deque(maxlen=10)
 
+        self.left = []
+        self.right = []
 
     def update(self, left, right):
         # flatten the matrices
