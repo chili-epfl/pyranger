@@ -1,5 +1,6 @@
 import logging; logger = logging.getLogger("ranger.sound")
 
+from robots.mw import ROS
 from robots.concurrency import action, ActionCancelled
 from robots.resources import lock
 from ranger.res import *
@@ -32,10 +33,13 @@ audio_publisher = None
 @action
 @lock(AUDIO)
 def playsound(robot, file):
-    global audio_publisher
 
-    if audio_publisher is None:
-        audio_publisher = AudioPublisher()
+    if robot.supports(ROS):
+        global audio_publisher
 
-    audio_publisher.play(file)
+        if audio_publisher is None:
+            audio_publisher = AudioPublisher()
 
+        audio_publisher.play(file)
+    else:
+        logger.warning("No ROS, no sound!")
