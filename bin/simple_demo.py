@@ -15,15 +15,22 @@ from ranger.helpers import colors
 logger = logging.getLogger("ranger.scenario")
 logging.getLogger("ranger.aseba").setLevel(logging.DEBUG-1) # effectively silent aseba debug messages
 
-current_action = None
+active_wait = None
 
 @action
 def on_lolette(robot):
+    global active_wait
+
     if robot.state.asleep:
         logger.info("I'm already sleeping!")
         return
 
     logger.info("Lolette is back! I can go to sleep!")
+
+    if active_wait:
+        active_wait.cancel()
+        active_wait = None
+
     robot.look_at_lolette()
     robot.sleep(0.5)
     robot.blink()
@@ -33,10 +40,13 @@ def on_lolette(robot):
     robot.lightbar(ramp=None, vertical = True, speed = -0.5)
     sleep.wait()
     robot.state.asleep = True
+    logger.info("I'm sleeping!")
 
 
 @action
 def on_lolette_removed(robot):
+    global active_wait
+
     if not robot.state.asleep:
         logger.info("I'm already awake!")
         return
@@ -47,7 +57,8 @@ def on_lolette_removed(robot):
     robot.wakeup().wait()
 
     #robot.undock()
-    #robot.active_wait().wait()
+    if not active_wait:
+        active_wait = robot.active_wait()
 
 @action
 def on_bumped(robot):
